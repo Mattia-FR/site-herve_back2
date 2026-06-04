@@ -1,6 +1,8 @@
 import type { RowDataPacket } from "mysql2";
-import { ARTIST_USER_ID } from "../config/artist";
 import type { ArtistProfile } from "../types/artist";
+
+/** ID de l'utilisateur artiste en base (profil public du site). */
+const ARTIST_USER_ID = 2;
 import type { ImageVariants } from "../types/images";
 import { buildImageUrl } from "../utils/image/imageUrl";
 import { parseVariants } from "../utils/image/parseVariants";
