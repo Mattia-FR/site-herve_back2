@@ -1,9 +1,11 @@
 import { Router } from "express";
-import { edit, readById } from "../controllers/usersAdminController";
+import { editMe, readMe } from "../controllers/usersAdminController";
+import { validateBody } from "../middlewares/validationMiddleware";
+import { userUpdateSchema } from "../validation/users.schemas";
 
 const router = Router();
 
-router.get("/:id", readById);
-router.put("/:id", edit);
+router.get("/me", readMe);
+router.put("/me", validateBody(userUpdateSchema), editMe);
 
 export default router;

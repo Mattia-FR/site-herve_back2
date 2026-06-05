@@ -1,6 +1,6 @@
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
-import type { User, UserCreateData } from "../types/users";
 import { NotFoundError } from "../errors/AppError";
+import type { User, UserCreateData } from "../types/users";
 import { toDateString } from "../utils/string/dateHelpers";
 import pool, { query } from "./db";
 
@@ -33,7 +33,7 @@ export const mapRowToUser = (row: UserRow): User => ({
 export const findById = async (id: number): Promise<User | null> => {
   const rows = await query<UserRow[]>(
     "SELECT id, username, email, tagline, bio, profile_image_id, created_at, updated_at FROM users WHERE id = ?",
-    [id],
+    [id]
   );
   return rows[0] ? mapRowToUser(rows[0]) : null;
 };
@@ -41,7 +41,7 @@ export const findById = async (id: number): Promise<User | null> => {
 const findByEmail = async (email: string): Promise<(User & { password: string }) | null> => {
   const rows = await query<UserWithPasswordRow[]>(
     "SELECT id, username, email, password, tagline, bio, profile_image_id, created_at, updated_at FROM users WHERE email = ?",
-    [email],
+    [email]
   );
   if (!rows[0]) return null;
   return { ...mapRowToUser(rows[0]), password: rows[0].password };
@@ -50,7 +50,7 @@ const findByEmail = async (email: string): Promise<(User & { password: string })
 const create = async (data: UserCreateData): Promise<User> => {
   const [result] = await pool.query<ResultSetHeader>(
     "INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
-    [data.username, data.email, data.password],
+    [data.username, data.email, data.password]
   );
   const user = await findById(result.insertId);
   if (!user) throw new NotFoundError("Utilisateur");
@@ -58,10 +58,7 @@ const create = async (data: UserCreateData): Promise<User> => {
 };
 
 const saveRefreshToken = async (userId: number, tokenHash: string): Promise<void> => {
-  await pool.query(
-    "UPDATE users SET refresh_token_hash = ? WHERE id = ?",
-    [tokenHash, userId],
-  );
+  await pool.query("UPDATE users SET refresh_token_hash = ? WHERE id = ?", [tokenHash, userId]);
 };
 
 interface RefreshTokenRow extends RowDataPacket {
@@ -69,10 +66,9 @@ interface RefreshTokenRow extends RowDataPacket {
 }
 
 const findRefreshTokenHash = async (userId: number): Promise<string | null> => {
-  const rows = await query<RefreshTokenRow[]>(
-    "SELECT refresh_token_hash FROM users WHERE id = ?",
-    [userId],
-  );
+  const rows = await query<RefreshTokenRow[]>("SELECT refresh_token_hash FROM users WHERE id = ?", [
+    userId,
+  ]);
   return rows[0]?.refresh_token_hash ?? null;
 };
 
@@ -83,11 +79,11 @@ const clearRefreshToken = async (userId: number): Promise<void> => {
 const rotateRefreshToken = async (
   userId: number,
   expectedTokenHash: string,
-  newTokenHash: string,
+  newTokenHash: string
 ): Promise<boolean> => {
   const [result] = await pool.query<ResultSetHeader>(
     "UPDATE users SET refresh_token_hash = ? WHERE id = ? AND refresh_token_hash = ?",
-    [newTokenHash, userId, expectedTokenHash],
+    [newTokenHash, userId, expectedTokenHash]
   );
   return result.affectedRows === 1;
 };

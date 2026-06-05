@@ -20,7 +20,7 @@ export interface CategoryRow extends RowDataPacket {
 const mapCoverImage = (
   path: string | null,
   variantsRaw: string | null,
-  altDescr: string | null,
+  altDescr: string | null
 ): CategoryCoverImage | null => {
   if (!path) return null;
   const imageUrl = buildImageUrl(path);
@@ -82,7 +82,9 @@ export const findById = async (id: number): Promise<Category | null> => {
 };
 
 const findAll = async (): Promise<Category[]> => {
-  const rows = await query<CategoryRow[]>(`${CATEGORY_SELECT} ORDER BY c.display_order ASC, c.id ASC`);
+  const rows = await query<CategoryRow[]>(
+    `${CATEGORY_SELECT} ORDER BY c.display_order ASC, c.id ASC`
+  );
   return rows.map(mapRowToCategory);
 };
 

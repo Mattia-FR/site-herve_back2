@@ -1,6 +1,6 @@
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
-import type { GuestbookCreateData, GuestbookEntry } from "../types/guestbook";
 import { NotFoundError } from "../errors/AppError";
+import type { GuestbookCreateData, GuestbookEntry } from "../types/guestbook";
 import { toDateString } from "../utils/string/dateHelpers";
 import pool, { query } from "./db";
 
@@ -32,7 +32,7 @@ export const findById = async (id: number): Promise<GuestbookEntry | null> => {
 
 const findApproved = async (): Promise<GuestbookEntry[]> => {
   const rows = await query<GuestbookEntryRow[]>(
-    `${GUESTBOOK_SELECT} WHERE status = 'approved' ORDER BY created_at DESC`,
+    `${GUESTBOOK_SELECT} WHERE status = 'approved' ORDER BY created_at DESC`
   );
   return rows.map(mapRowToEntry);
 };
@@ -40,7 +40,7 @@ const findApproved = async (): Promise<GuestbookEntry[]> => {
 const create = async (data: GuestbookCreateData): Promise<GuestbookEntry> => {
   const [result] = await pool.query<ResultSetHeader>(
     "INSERT INTO guestbook_entries (author_name, email, message) VALUES (?, ?, ?)",
-    [data.author_name, data.email ?? null, data.message],
+    [data.author_name, data.email ?? null, data.message]
   );
   const entry = await findById(result.insertId);
   if (!entry) throw new NotFoundError("Entrée");

@@ -5,7 +5,7 @@
 ```
 Requête HTTP
     ↓
-routes/*.ts
+routes/*.ts               ← validateBody / validateQuery / validateParams / requireValidId (Zod)
     ↓
 controllers/*.ts          ← asyncHandler (pas de try/catch)
     ↓
@@ -28,33 +28,68 @@ Toutes les réponses d'erreur ont le format suivant :
 }
 ```
 
+Erreur de validation Zod (champs du formulaire) :
+
+```json
+{
+  "success": false,
+  "code": "VALIDATION_FAILED",
+  "message": "Validation échouée",
+  "details": [
+    { "field": "email", "message": "Email invalide" }
+  ]
+}
+```
+
 | Champ     | Type      | Description                                      |
 |-----------|-----------|--------------------------------------------------|
 | `success` | `false`   | Toujours `false` pour les erreurs                |
 | `code`    | `string`  | Code machine (voir liste ci-dessous)             |
 | `message` | `string`  | Message lisible, transmissible au frontend       |
+| `details` | `array?`  | Présent uniquement pour `VALIDATION_FAILED` (Zod) |
 
 ---
 
 ## Codes d'erreur
 
-| Code               | HTTP | Classe                | Déclenchement                            |
-|--------------------|------|-----------------------|------------------------------------------|
-| `NOT_FOUND`        | 404  | `NotFoundError`       | Ressource introuvable en base            |
-| `VALIDATION_ERROR` | 400  | `ValidationError`     | Données invalides / contrainte SQL       |
-| `UNAUTHORIZED`     | 401  | `UnauthorizedError`   | Authentification manquante ou invalide   |
-| `INTERNAL_ERROR`   | 500  | —                     | Erreur inattendue (filet de sécurité)    |
+> Source de vérité code : [`src/config/errorCodes.ts`](src/config/errorCodes.ts) — garder en sync avec `site-herve_front2/src/types/api.ts`.
+
+| Code                   | HTTP | Classe                | Déclenchement                            |
+|------------------------|------|-----------------------|------------------------------------------|
+| `NOT_FOUND`            | 404  | `NotFoundError`       | Ressource introuvable en base            |
+| `ROUTE_NOT_FOUND`      | 404  | `RouteNotFoundError`  | Route HTTP inconnue                      |
+| `VALIDATION_FAILED`    | 400  | `ValidationFailedError` | Échec Zod (détails par champ)        |
+| `VALIDATION_ERROR`     | 400  | `ValidationError`     | Contrainte SQL / message métier unique   |
+| `BAD_REQUEST`          | 400  | `BadRequestError`     | Requête invalide (générique)             |
+| `INVALID_ID`           | 400  | `BadRequestError`     | Paramètre `:id` non entier positif       |
+| `UNAUTHORIZED`         | 401  | `UnauthorizedError`   | Token absent ou session invalide         |
+| `INVALID_CREDENTIALS`  | 401  | `UnauthorizedError`   | Email ou mot de passe incorrect (login)  |
+| `TOKEN_EXPIRED`        | 401  | `UnauthorizedError`   | Access ou refresh token expiré           |
+| `TOKEN_INVALID`        | 401  | `UnauthorizedError`   | JWT malformé ou signature invalide         |
+| `FILE_REQUIRED`        | 400  | `BadRequestError`     | Upload sans fichier                      |
+| `FILE_TOO_LARGE`       | 400  | `BadRequestError`     | Fichier > 10 Mo (Multer)                 |
+| `FILE_TYPE_NOT_ALLOWED`| 400  | `BadRequestError`     | MIME ou magic bytes non autorisés        |
+| `IMAGE_DIMENSIONS_TOO_LARGE` | 400 | `BadRequestError` | Dimensions > 10 000 px (metadata Sharp) |
+| `IMAGE_INVALID`        | 400  | `BadRequestError`     | Fichier corrompu / illisible par Sharp malgré magic bytes valides |
+| `RATE_LIMITED`         | 429  | —                     | Trop de requêtes (rate limiter)        |
+| `INTERNAL_ERROR`       | 500  | `InternalError`       | Erreur inattendue (filet de sécurité)    |
 
 ---
 
 ## Hiérarchie d'erreurs (`src/errors/AppError.ts`)
 
 ```ts
-AppError (base)
-├── NotFoundError       → 404 / NOT_FOUND
-├── ValidationError     → 400 / VALIDATION_ERROR
-└── UnauthorizedError   → 401 / UNAUTHORIZED
+AppError (base, `details?` optionnel)
+├── NotFoundError         → 404 / NOT_FOUND
+├── RouteNotFoundError    → 404 / ROUTE_NOT_FOUND
+├── ValidationFailedError → 400 / VALIDATION_FAILED (+ details[])
+├── ValidationError       → 400 / VALIDATION_ERROR
+├── BadRequestError       → 400 / BAD_REQUEST (+ codes fichier, INVALID_ID, IMAGE_DIMENSIONS_TOO_LARGE, IMAGE_INVALID)
+├── UnauthorizedError     → 401 / UNAUTHORIZED (+ INVALID_CREDENTIALS, TOKEN_*)
+└── InternalError         → 500 / INTERNAL_ERROR
 ```
+
+Helper central : `src/utils/sendError.ts` — utilisé par `errorHandler`, `notFound` et les controllers auth.
 
 Usage dans un controller ou un model :
 
@@ -67,6 +102,24 @@ if (!article) throw new NotFoundError("Article");
 // Donnée invalide
 throw new ValidationError("Email déjà utilisé");
 ```
+
+---
+
+## Validation Zod (`src/validation/`, `src/middlewares/validationMiddleware.ts`)
+
+Les schémas sont alignés avec `site-herve_front/src/validation/schemas.ts`. Après validation réussie :
+
+- `req.validatedBody` — body JSON ou form-data parsé
+- `req.validatedQuery` — query string
+- `req.validatedParams` — paramètres d’URL (ex. slug)
+- `req.validatedId` — entier positif via `requireValidId()`
+
+Les controllers utilisent `getValidatedBody`, `getValidatedQuery`, etc. (`src/utils/http/requestHelpers.ts`).
+
+**Distinction importante :**
+
+- `VALIDATION_FAILED` : payload HTTP rejeté par Zod → le front peut mapper `details` sur les champs du formulaire
+- `VALIDATION_ERROR` : erreur après passage du middleware (doublon SQL, référence FK, etc.)
 
 ---
 

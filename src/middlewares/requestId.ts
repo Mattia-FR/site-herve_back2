@@ -6,11 +6,7 @@
 import { randomUUID } from "crypto";
 import type { NextFunction, Request, Response } from "express";
 
-export function requestIdMiddleware(
-  req: Request,
-  _res: Response,
-  next: NextFunction,
-): void {
+export function requestIdMiddleware(req: Request, _res: Response, next: NextFunction): void {
   req.requestId = randomUUID();
   next();
 }

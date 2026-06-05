@@ -26,7 +26,7 @@ const findProfile = async (): Promise<ArtistProfile | null> => {
      FROM users u
      LEFT JOIN images i ON u.profile_image_id = i.id
      WHERE u.id = ?`,
-    [ARTIST_USER_ID],
+    [ARTIST_USER_ID]
   );
 
   const row = rows[0];

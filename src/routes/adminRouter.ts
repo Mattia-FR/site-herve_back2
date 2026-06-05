@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireAuth } from "../middlewares/requireAuth";
 import articlesAdminRouter from "./articlesAdminRouter";
 import categoriesAdminRouter from "./categoriesAdminRouter";
 import guestbookAdminRouter from "./guestbookAdminRouter";
@@ -7,6 +8,8 @@ import messagesAdminRouter from "./messagesAdminRouter";
 import usersAdminRouter from "./usersAdminRouter";
 
 const router = Router();
+
+router.use(requireAuth);
 
 router.use("/articles", articlesAdminRouter);
 router.use("/users", usersAdminRouter);

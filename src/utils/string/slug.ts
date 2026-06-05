@@ -12,7 +12,7 @@ export function buildSlug(value: string): string {
 export function applySlugIfChanged(
   payload: Record<string, unknown>,
   newName: string | undefined,
-  existingName: string,
+  existingName: string
 ): Record<string, unknown> {
   if (newName !== undefined && newName !== existingName) {
     return { ...payload, slug: buildSlug(newName) };

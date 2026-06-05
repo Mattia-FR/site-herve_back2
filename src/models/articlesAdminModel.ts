@@ -1,6 +1,6 @@
 import type { ResultSetHeader } from "mysql2";
-import type { Article, ArticleCreateData, ArticleUpdateData } from "../types/articles";
 import { NotFoundError } from "../errors/AppError";
+import type { Article, ArticleCreateData, ArticleUpdateData } from "../types/articles";
 import { buildUpdateQuery } from "../utils/db/buildUpdateQuery";
 import { toMySQLDatetime } from "../utils/string/dateHelpers";
 import { createExcerpt } from "../utils/string/excerpt";
@@ -38,7 +38,7 @@ const create = async (data: ArticleCreateData): Promise<Article> => {
       data.user_id,
       data.featured_image_id ?? null,
       toMySQLDatetime(data.published_at),
-    ],
+    ]
   );
   const article = await findByIdForAdmin(result.insertId);
   if (!article) throw new NotFoundError("Article");
@@ -68,11 +68,15 @@ const update = async (id: number, data: ArticleUpdateData): Promise<Article | nu
 };
 
 const deleteById = async (id: number): Promise<boolean> => {
-  const [result] = await pool.query<ResultSetHeader>(
-    "DELETE FROM articles WHERE id = ?",
-    [id],
-  );
+  const [result] = await pool.query<ResultSetHeader>("DELETE FROM articles WHERE id = ?", [id]);
   return result.affectedRows > 0;
 };
 
-export default { findAllForAdmin, findByIdForAdmin, findBySlugForAdmin, create, update, deleteById };
+export default {
+  findAllForAdmin,
+  findByIdForAdmin,
+  findBySlugForAdmin,
+  create,
+  update,
+  deleteById,
+};

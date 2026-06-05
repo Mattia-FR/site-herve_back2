@@ -75,7 +75,7 @@ const findHomepagePreview = async (): Promise<Article[]> => findPublished(4);
 const findPublishedById = async (id: number): Promise<Article | null> => {
   const rows = await query<ArticleRow[]>(
     `${DETAIL_SELECT} WHERE a.status = 'published' AND a.id = ?`,
-    [id],
+    [id]
   );
   return rows[0] ? mapRow(rows[0], true) : null;
 };
@@ -83,7 +83,7 @@ const findPublishedById = async (id: number): Promise<Article | null> => {
 const findPublishedBySlug = async (slug: string): Promise<Article | null> => {
   const rows = await query<ArticleRow[]>(
     `${DETAIL_SELECT} WHERE a.status = 'published' AND a.slug = ?`,
-    [slug],
+    [slug]
   );
   return rows[0] ? mapRow(rows[0], true) : null;
 };

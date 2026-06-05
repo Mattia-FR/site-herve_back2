@@ -3,13 +3,17 @@
  *
  * Couche : Types globaux.
  * requestId : injecté par requestIdMiddleware sur chaque requête.
- * user : réservé pour l'authentification JWT (non implémentée).
+ * validated* : injectés par validationMiddleware après validation Zod réussie.
  */
 declare global {
   namespace Express {
     interface Request {
       requestId: string;
       user?: { userId: number };
+      validatedBody?: unknown;
+      validatedQuery?: unknown;
+      validatedParams?: unknown;
+      validatedId?: number;
     }
   }
 }

@@ -6,7 +6,10 @@ const DEFAULT_WORD_COUNT = 25;
  */
 export function createExcerpt(text: string, wordCount = DEFAULT_WORD_COUNT): string {
   if (!text || typeof text !== "string") return "";
-  const stripped = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  const stripped = text
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   if (!stripped) return "";
   const words = stripped.split(" ");
   if (words.length <= wordCount) return stripped;

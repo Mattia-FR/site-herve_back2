@@ -1,28 +1,66 @@
 import type { Request, Response } from "express";
+import type { z } from "zod";
+import { UPLOADS_GALLERY_VARIANTS_DIR } from "../config/uploadsPaths";
 import { NotFoundError } from "../errors/AppError";
 import imagesAdminModel from "../models/imagesAdminModel";
 import { asyncHandler } from "../utils/asyncHandler";
+import {
+  getAuthUserId,
+  getUploadedFile,
+  getValidatedBody,
+  getValidatedId,
+} from "../utils/http/requestHelpers";
+import { processUploadedImage } from "../utils/image/processUploadedImage";
+import type {
+  imageCategoriesSchema,
+  imageMetadataSchema,
+  imageUpdateSchema,
+} from "../validation/images.schemas";
 
 const browse = asyncHandler(async (_req: Request, res: Response) => {
   const images = await imagesAdminModel.findAll();
   res.status(200).json(images);
 });
 
+const add = asyncHandler(async (req: Request, res: Response) => {
+  const file = getUploadedFile(req);
+  const userId = getAuthUserId(req);
+  const meta = getValidatedBody<z.infer<typeof imageMetadataSchema>>(req);
+
+  const variants = await processUploadedImage(file.path, UPLOADS_GALLERY_VARIANTS_DIR);
+
+  const image = await imagesAdminModel.create({
+    title: meta.title ?? null,
+    description: meta.description ?? null,
+    alt_descr: meta.alt_descr ?? null,
+    is_in_gallery: meta.is_in_gallery ?? false,
+    display_order: meta.display_order ?? 0,
+    article_id: meta.article_id ?? null,
+    path: `/uploads/gallery/${file.filename}`,
+    variants,
+    user_id: userId,
+  });
+  res.status(201).json(image);
+});
+
 const read = asyncHandler(async (req: Request, res: Response) => {
-  const image = await imagesAdminModel.findById(Number(req.params.id));
+  const image = await imagesAdminModel.findById(getValidatedId(req));
   if (!image) throw new NotFoundError("Image");
   res.status(200).json(image);
 });
 
 const edit = asyncHandler(async (req: Request, res: Response) => {
-  const image = await imagesAdminModel.update(Number(req.params.id), req.body);
+  const image = await imagesAdminModel.update(
+    getValidatedId(req),
+    getValidatedBody<z.infer<typeof imageUpdateSchema>>(req)
+  );
   if (!image) throw new NotFoundError("Image");
   res.status(200).json(image);
 });
 
 const setCategories = asyncHandler(async (req: Request, res: Response) => {
-  const id = Number(req.params.id);
-  const { categoryIds } = req.body as { categoryIds: number[] };
+  const id = getValidatedId(req);
+  const { categoryIds } = getValidatedBody<z.infer<typeof imageCategoriesSchema>>(req);
 
   await imagesAdminModel.setCategories(id, categoryIds);
 
@@ -32,9 +70,9 @@ const setCategories = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const destroy = asyncHandler(async (req: Request, res: Response) => {
-  const deleted = await imagesAdminModel.deleteById(Number(req.params.id));
+  const deleted = await imagesAdminModel.deleteById(getValidatedId(req));
   if (!deleted) throw new NotFoundError("Image");
   res.sendStatus(204);
 });
 
-export { browse, destroy, edit, read, setCategories };
+export { add, browse, destroy, edit, read, setCategories };

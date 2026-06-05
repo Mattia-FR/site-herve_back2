@@ -1,6 +1,6 @@
 import type { ResultSetHeader } from "mysql2";
-import type { Category, CategoryCreateData, CategoryUpdateData } from "../types/categories";
 import { NotFoundError } from "../errors/AppError";
+import type { Category, CategoryCreateData, CategoryUpdateData } from "../types/categories";
 import { buildUpdateQuery } from "../utils/db/buildUpdateQuery";
 import { applySlugIfChanged, buildSlug } from "../utils/string/slug";
 import publicCategoriesModel, { findById } from "./categoriesModel";
@@ -10,7 +10,7 @@ const create = async (data: CategoryCreateData): Promise<Category> => {
   const slug = buildSlug(data.name);
   const [result] = await pool.query<ResultSetHeader>(
     "INSERT INTO categories (name, slug, display_order) VALUES (?, ?, ?)",
-    [data.name, slug, data.display_order ?? 0],
+    [data.name, slug, data.display_order ?? 0]
   );
   const created = await findById(result.insertId);
   if (!created) throw new NotFoundError("Catégorie");
@@ -30,10 +30,7 @@ const update = async (id: number, data: CategoryUpdateData): Promise<Category | 
 };
 
 const deleteById = async (id: number): Promise<boolean> => {
-  const [result] = await pool.query<ResultSetHeader>(
-    "DELETE FROM categories WHERE id = ?",
-    [id],
-  );
+  const [result] = await pool.query<ResultSetHeader>("DELETE FROM categories WHERE id = ?", [id]);
   return result.affectedRows > 0;
 };
 

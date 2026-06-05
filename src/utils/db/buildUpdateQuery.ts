@@ -5,7 +5,7 @@
  */
 export function buildUpdateQuery(
   table: string,
-  payload: object,
+  payload: object
 ): { sql: string; values: unknown[] } | null {
   const fields: string[] = [];
   const values: unknown[] = [];

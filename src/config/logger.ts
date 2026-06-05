@@ -36,22 +36,15 @@ const devFormat = combine(
   errors({ stack: true }),
   printf((info) => {
     const { timestamp: ts, level, message, stack, ...meta } = info;
-    const metaKeys = Object.keys(meta).filter(
-      (k) => !["level", "splat"].includes(k),
-    );
-    const metaSuffix =
-      metaKeys.length > 0 ? ` ${JSON.stringify(meta, null, 0)}` : "";
+    const metaKeys = Object.keys(meta).filter((k) => !["level", "splat"].includes(k));
+    const metaSuffix = metaKeys.length > 0 ? ` ${JSON.stringify(meta, null, 0)}` : "";
     const text = typeof message === "string" ? message : JSON.stringify(message);
     const base = `${ts} ${level}: ${text}${metaSuffix}`;
     return stack ? `${base}\n${stack}` : base;
-  }),
+  })
 );
 
-const prodFormat = combine(
-  timestamp(),
-  errors({ stack: true }),
-  winston.format.json(),
-);
+const prodFormat = combine(timestamp(), errors({ stack: true }), winston.format.json());
 
 const logger = winston.createLogger({
   level: logLevel,

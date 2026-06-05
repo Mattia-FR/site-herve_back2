@@ -1,13 +1,23 @@
+import fs from "node:fs/promises";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
-import type { ImageCreateData, ImageUpdateData, ImageWithUrl } from "../types/images";
+import { resolveUploadPath } from "../config/uploadsPaths";
 import { NotFoundError, ValidationError } from "../errors/AppError";
+import type { ImageCreateData, ImageUpdateData, ImageWithUrl } from "../types/images";
 import { buildUpdateQuery } from "../utils/db/buildUpdateQuery";
 import pool, { query } from "./db";
-import { findById, type ImageRow, mapRowToImage, mapToImageWithUrl } from "./imagesModel";
+import { type ImageRow, findById, mapRowToImage, mapToImageWithUrl } from "./imagesModel";
+
+async function unlinkSilent(relativePath: string): Promise<void> {
+  try {
+    await fs.unlink(resolveUploadPath(relativePath));
+  } catch {
+    // Fichier déjà absent
+  }
+}
 
 const findAll = async (): Promise<ImageWithUrl[]> => {
   const rows = await query<ImageRow[]>(
-    "SELECT id, title, description, path, alt_descr, is_in_gallery, display_order, user_id, article_id, variants, created_at, updated_at FROM images ORDER BY created_at DESC",
+    "SELECT id, title, description, path, alt_descr, is_in_gallery, display_order, user_id, article_id, variants, created_at, updated_at FROM images ORDER BY created_at DESC"
   );
   return rows.map((r) => mapToImageWithUrl(mapRowToImage(r)));
 };
@@ -19,7 +29,7 @@ interface ImageCategoryRow extends RowDataPacket {
 const findCategoriesByImageId = async (imageId: number): Promise<number[]> => {
   const rows = await query<ImageCategoryRow[]>(
     "SELECT category_id FROM images_categories WHERE image_id = ?",
-    [imageId],
+    [imageId]
   );
   return rows.map((r) => r.category_id);
 };
@@ -38,7 +48,7 @@ const create = async (data: ImageCreateData): Promise<ImageWithUrl> => {
       data.user_id,
       data.article_id ?? null,
       data.variants ? JSON.stringify(data.variants) : null,
-    ],
+    ]
   );
   const created = await findById(result.insertId);
   if (!created) throw new NotFoundError("Image");
@@ -67,7 +77,7 @@ const setCategories = async (imageId: number, categoryIds: number[]): Promise<vo
       const values = categoryIds.flatMap((cid) => [imageId, cid]);
       await conn.execute(
         `INSERT INTO images_categories (image_id, category_id) VALUES ${placeholders}`,
-        values,
+        values
       );
     }
 
@@ -85,11 +95,30 @@ const setCategories = async (imageId: number, categoryIds: number[]): Promise<vo
 };
 
 const deleteById = async (id: number): Promise<boolean> => {
-  const [result] = await pool.query<ResultSetHeader>(
-    "DELETE FROM images WHERE id = ?",
-    [id],
-  );
+  const img = await findById(id);
+
+  const [result] = await pool.query<ResultSetHeader>("DELETE FROM images WHERE id = ?", [id]);
+
+  if (result.affectedRows > 0 && img) {
+    await unlinkSilent(img.path);
+    if (img.variants) {
+      await Promise.all([
+        unlinkSilent(img.variants.thumb),
+        unlinkSilent(img.variants.md),
+        unlinkSilent(img.variants.lg),
+      ]);
+    }
+  }
+
   return result.affectedRows > 0;
 };
 
-export default { findAll, findById, findCategoriesByImageId, create, update, setCategories, deleteById };
+export default {
+  findAll,
+  findById,
+  findCategoriesByImageId,
+  create,
+  update,
+  setCategories,
+  deleteById,
+};

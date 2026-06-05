@@ -1,6 +1,6 @@
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
-import type { Message, MessageCreateData, MessageStatus } from "../types/messages";
 import { NotFoundError } from "../errors/AppError";
+import type { Message, MessageCreateData, MessageStatus } from "../types/messages";
 import { toDateString } from "../utils/string/dateHelpers";
 import pool, { query } from "./db";
 
@@ -47,7 +47,7 @@ const create = async (data: MessageCreateData): Promise<Message> => {
       data.ip ?? null,
       data.subject,
       data.text,
-    ],
+    ]
   );
   const msg = await findById(result.insertId);
   if (!msg) throw new NotFoundError("Message");

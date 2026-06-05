@@ -3,10 +3,12 @@ import mysql, { type Pool } from "mysql2/promise";
 const { DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT } = process.env;
 
 if (!DB_HOST || !DB_USER || !DB_PASSWORD || !DB_NAME) {
-  throw new Error("Variables d'environnement de base de données manquantes (DB_HOST, DB_USER, DB_PASSWORD, DB_NAME)");
+  throw new Error(
+    "Variables d'environnement de base de données manquantes (DB_HOST, DB_USER, DB_PASSWORD, DB_NAME)"
+  );
 }
 
-type PoolExecuteParams = Parameters<Pool["execute"]>[1];
+type PoolQueryParams = Parameters<Pool["query"]>[1];
 
 const pool = mysql.createPool({
   host: DB_HOST,
@@ -18,8 +20,8 @@ const pool = mysql.createPool({
   connectionLimit: 10,
 });
 
-export async function query<T>(sql: string, params?: PoolExecuteParams): Promise<T> {
-  const [rows] = await pool.execute(sql, params);
+export async function query<T>(sql: string, params?: PoolQueryParams): Promise<T> {
+  const [rows] = await pool.query(sql, params);
   return rows as T;
 }
 

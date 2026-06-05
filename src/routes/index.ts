@@ -1,5 +1,6 @@
 import { Router } from "express";
 import adminRouter from "./adminRouter";
+import authRouter from "./authRouter";
 import articlesRouter from "./articlesRouter";
 import artistRouter from "./artistRouter";
 import categoriesRouter from "./categoriesRouter";
@@ -13,6 +14,7 @@ router.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
+router.use("/auth", authRouter);
 router.use("/artist", artistRouter);
 router.use("/articles", articlesRouter);
 router.use("/images", imagesRouter);

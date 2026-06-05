@@ -7,17 +7,11 @@
 import type { NextFunction, Request, Response } from "express";
 import logger from "../config/logger";
 
-export function httpLogMiddleware(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): void {
+export function httpLogMiddleware(req: Request, res: Response, next: NextFunction): void {
   const start = process.hrtime.bigint();
 
   res.on("finish", () => {
-    const durationMs =
-      Math.round(Number(process.hrtime.bigint() - start) / 1_000_000 * 10) /
-      10;
+    const durationMs = Math.round((Number(process.hrtime.bigint() - start) / 1_000_000) * 10) / 10;
 
     logger.http({
       message: `${req.method} ${req.originalUrl}`,
