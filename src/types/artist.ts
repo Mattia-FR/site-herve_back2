@@ -13,4 +13,7 @@ export interface ArtistProfile {
   tagline: string | null;
   bio: string | null;
   profileImage: ArtistProfileImage | null;
+  heroText: string | null;
+  quoteText: string | null;
+  quoteAuthor: string | null;
 }

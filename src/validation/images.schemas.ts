@@ -27,7 +27,7 @@ export const imageUpdateSchema = z.object({
 
 /** Body PUT /api/admin/images/:id/categories. */
 export const imageCategoriesSchema = z.object({
-  categoryIds: z.array(z.number().int().positive()),
+  categoryIds: z.array(z.number().int().positive()).max(1),
 });
 
 /** Query GET /api/images/gallery (?category=slug). */

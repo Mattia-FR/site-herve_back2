@@ -3,7 +3,7 @@
  *
  * Couche : Middleware — à monter en premier dans app.ts.
  */
-import { randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
 import type { NextFunction, Request, Response } from "express";
 
 export function requestIdMiddleware(req: Request, _res: Response, next: NextFunction): void {

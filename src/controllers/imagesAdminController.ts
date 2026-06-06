@@ -44,9 +44,11 @@ const add = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const read = asyncHandler(async (req: Request, res: Response) => {
-  const image = await imagesAdminModel.findById(getValidatedId(req));
+  const id = getValidatedId(req);
+  const image = await imagesAdminModel.findById(id);
   if (!image) throw new NotFoundError("Image");
-  res.status(200).json(image);
+  const categoryIds = await imagesAdminModel.findCategoriesByImageId(id);
+  res.status(200).json({ ...image, categoryIds });
 });
 
 const edit = asyncHandler(async (req: Request, res: Response) => {

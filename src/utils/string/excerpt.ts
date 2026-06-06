@@ -13,5 +13,5 @@ export function createExcerpt(text: string, wordCount = DEFAULT_WORD_COUNT): str
   if (!stripped) return "";
   const words = stripped.split(" ");
   if (words.length <= wordCount) return stripped;
-  return words.slice(0, wordCount).join(" ") + "…";
+  return `${words.slice(0, wordCount).join(" ")}…`;
 }

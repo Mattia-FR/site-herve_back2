@@ -5,6 +5,8 @@ import categoriesAdminRouter from "./categoriesAdminRouter";
 import guestbookAdminRouter from "./guestbookAdminRouter";
 import imagesAdminRouter from "./imagesAdminRouter";
 import messagesAdminRouter from "./messagesAdminRouter";
+import siteSettingsAdminRouter from "./siteSettingsAdminRouter";
+import statsAdminRouter from "./statsAdminRouter";
 import usersAdminRouter from "./usersAdminRouter";
 
 const router = Router();
@@ -17,5 +19,7 @@ router.use("/images", imagesAdminRouter);
 router.use("/categories", categoriesAdminRouter);
 router.use("/messages", messagesAdminRouter);
 router.use("/guestbook", guestbookAdminRouter);
+router.use("/stats", statsAdminRouter);
+router.use("/site", siteSettingsAdminRouter);
 
 export default router;

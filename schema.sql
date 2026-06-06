@@ -104,6 +104,20 @@ CREATE TABLE images_categories (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
+-- CONTENU PAGE D'ACCUEIL (singleton)
+-- ============================================
+
+CREATE TABLE site_settings (
+    id TINYINT UNSIGNED NOT NULL DEFAULT 1,
+    hero_text TEXT,
+    quote_text TEXT,
+    quote_author VARCHAR(100),
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT pk_site_settings PRIMARY KEY (id),
+    CONSTRAINT chk_site_settings_single_row CHECK (id = 1)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
 -- LIVRE D'OR
 -- ============================================
 

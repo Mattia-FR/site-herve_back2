@@ -6,7 +6,7 @@ import { processImage } from "./processImage";
 
 export async function processUploadedImage(
   filePath: string,
-  variantsDir: string,
+  variantsDir: string
 ): Promise<ImageVariants> {
   const basename = path.basename(filePath, path.extname(filePath));
 
