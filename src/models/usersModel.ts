@@ -8,6 +8,8 @@ export interface UserRow extends RowDataPacket {
   id: number;
   username: string;
   email: string;
+  first_name: string | null;
+  last_name: string | null;
   tagline: string | null;
   bio: string | null;
   profile_image_id: number | null;
@@ -23,6 +25,8 @@ export const mapRowToUser = (row: UserRow): User => ({
   id: row.id,
   username: row.username,
   email: row.email,
+  first_name: row.first_name ?? null,
+  last_name: row.last_name ?? null,
   tagline: row.tagline ?? null,
   bio: row.bio ?? null,
   profile_image_id: row.profile_image_id ?? null,
@@ -32,7 +36,7 @@ export const mapRowToUser = (row: UserRow): User => ({
 
 export const findById = async (id: number): Promise<User | null> => {
   const rows = await query<UserRow[]>(
-    "SELECT id, username, email, tagline, bio, profile_image_id, created_at, updated_at FROM users WHERE id = ?",
+    "SELECT id, username, email, first_name, last_name, tagline, bio, profile_image_id, created_at, updated_at FROM users WHERE id = ?",
     [id]
   );
   return rows[0] ? mapRowToUser(rows[0]) : null;
@@ -40,7 +44,7 @@ export const findById = async (id: number): Promise<User | null> => {
 
 const findByEmail = async (email: string): Promise<(User & { password: string }) | null> => {
   const rows = await query<UserWithPasswordRow[]>(
-    "SELECT id, username, email, password, tagline, bio, profile_image_id, created_at, updated_at FROM users WHERE email = ?",
+    "SELECT id, username, email, password, first_name, last_name, tagline, bio, profile_image_id, created_at, updated_at FROM users WHERE email = ?",
     [email]
   );
   if (!rows[0]) return null;

@@ -1,4 +1,6 @@
-const IMAGE_BASE_URL = process.env.IMAGE_BASE_URL || "http://localhost:4242";
+import { env } from "../../config/env";
+
+const IMAGE_BASE_URL = env.IMAGE_BASE_URL;
 
 /**
  * Préfixe un chemin relatif avec la base URL publique de l'API.

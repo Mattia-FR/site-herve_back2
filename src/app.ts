@@ -2,6 +2,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
 import rateLimit from "express-rate-limit";
+import { env } from "./config/env";
 import { helmetMiddleware } from "./config/helmet";
 import { UPLOADS_ROOT } from "./config/uploadsPaths";
 import { errorHandler } from "./middlewares/errorHandler";
@@ -12,17 +13,15 @@ import router from "./routes";
 
 const app = express();
 
-if (process.env.NODE_ENV === "production") {
+if (env.NODE_ENV === "production") {
   app.set("trust proxy", 1);
 }
-
-const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:5173";
 
 app.use(requestIdMiddleware);
 app.use(helmetMiddleware);
 app.use(
   cors({
-    origin: CORS_ORIGIN,
+    origin: env.CORS_ORIGIN,
     credentials: true,
   })
 );
@@ -76,7 +75,7 @@ app.use("/api/guestbook", (req, res, next) => {
 });
 
 const uploadsStaticOptions =
-  process.env.NODE_ENV === "production"
+  env.NODE_ENV === "production"
     ? { maxAge: 7 * 24 * 60 * 60 * 1000, immutable: true }
     : { maxAge: 0 };
 

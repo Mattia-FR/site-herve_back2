@@ -3,6 +3,7 @@ import argon2 from "argon2";
 import type { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { argon2Options } from "../config/argon2";
+import { env } from "../config/env";
 import logger from "../config/logger";
 import { InternalError, UnauthorizedError } from "../errors/AppError";
 import usersModel from "../models/usersModel";
@@ -15,7 +16,7 @@ const REFRESH_COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 
 const REFRESH_COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
+  secure: env.NODE_ENV === "production",
   sameSite: "strict" as const,
   maxAge: REFRESH_COOKIE_MAX_AGE,
 };
@@ -33,15 +34,11 @@ function clearRefreshTokenCookie(res: Response): void {
 }
 
 function generateAccessToken(userId: number): string {
-  const secret = process.env.ACCESS_TOKEN_SECRET;
-  if (!secret) throw new Error("ACCESS_TOKEN_SECRET non défini");
-  return jwt.sign({ userId }, secret, { expiresIn: ACCESS_EXPIRY });
+  return jwt.sign({ userId }, env.ACCESS_TOKEN_SECRET, { expiresIn: ACCESS_EXPIRY });
 }
 
 function generateRefreshToken(userId: number): string {
-  const secret = process.env.REFRESH_TOKEN_SECRET;
-  if (!secret) throw new Error("REFRESH_TOKEN_SECRET non défini");
-  return jwt.sign({ userId, jti: randomUUID() }, secret, {
+  return jwt.sign({ userId, jti: randomUUID() }, env.REFRESH_TOKEN_SECRET, {
     expiresIn: REFRESH_EXPIRY,
   });
 }
@@ -88,15 +85,10 @@ const refresh = asyncHandler(async (req: Request, res: Response) => {
     return;
   }
 
-  const secret = process.env.REFRESH_TOKEN_SECRET;
-  if (!secret) {
-    logger.error({ message: "REFRESH_TOKEN_SECRET non défini" });
-    sendError(res, new InternalError());
-    return;
-  }
-
   try {
-    const payload = jwt.verify(refreshToken, secret) as { userId: number };
+    const payload = jwt.verify(refreshToken, env.REFRESH_TOKEN_SECRET) as {
+      userId: number;
+    };
 
     const storedTokenHash = await usersModel.findRefreshTokenHash(payload.userId);
     if (!storedTokenHash) {
@@ -140,14 +132,13 @@ const refresh = asyncHandler(async (req: Request, res: Response) => {
 const logout = asyncHandler(async (req: Request, res: Response) => {
   const refreshToken: string | undefined = req.cookies?.refreshToken;
   if (refreshToken) {
-    const secret = process.env.REFRESH_TOKEN_SECRET;
-    if (secret) {
-      try {
-        const payload = jwt.verify(refreshToken, secret) as { userId: number };
-        await usersModel.clearRefreshToken(payload.userId);
-      } catch {
-        // Token invalide — on continue le logout
-      }
+    try {
+      const payload = jwt.verify(refreshToken, env.REFRESH_TOKEN_SECRET) as {
+        userId: number;
+      };
+      await usersModel.clearRefreshToken(payload.userId);
+    } catch {
+      // Token invalide — on continue le logout
     }
   }
 

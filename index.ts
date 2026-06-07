@@ -4,10 +4,11 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import app from "./src/app";
+import { env } from "./src/config/env";
 import { checkStartup } from "./src/config/startup";
 import logger from "./src/config/logger";
 
-const port = process.env.PORT ? Number.parseInt(process.env.PORT, 10) : 4242;
+const port = env.PORT;
 
 async function main() {
   await checkStartup();

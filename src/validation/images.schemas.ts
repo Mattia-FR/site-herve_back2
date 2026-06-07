@@ -3,7 +3,7 @@
  */
 import { z } from "zod";
 
-// sync with Front/src/validation/schemas.ts
+// sync with site-herve_front2/src/validation/schemas.ts
 
 /** Body POST /api/admin/images (métadonnées après upload Multer). */
 export const imageMetadataSchema = z.object({

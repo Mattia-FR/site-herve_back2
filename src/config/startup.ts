@@ -1,24 +1,15 @@
 import sharp from "sharp";
 import pool from "../models/db";
+import { env } from "./env";
 import logger from "./logger";
 import { ensureUploadDirs } from "./uploadsPaths";
 
 export function configureSharp(): void {
-  sharp.concurrency(process.env.NODE_ENV === "production" ? 2 : 0);
+  sharp.concurrency(env.NODE_ENV === "production" ? 2 : 0);
 }
-
-const REQUIRED_ENV_VARS = ["ACCESS_TOKEN_SECRET", "REFRESH_TOKEN_SECRET"] as const;
 
 export async function checkStartup(): Promise<void> {
   configureSharp();
-
-  const missing = REQUIRED_ENV_VARS.filter((key) => !process.env[key]);
-  if (missing.length > 0) {
-    logger.error(
-      `Démarrage impossible — variables d'environnement manquantes : ${missing.join(", ")}`
-    );
-    process.exit(1);
-  }
 
   try {
     await ensureUploadDirs();

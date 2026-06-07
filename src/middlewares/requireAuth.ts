@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
+import { env } from "../config/env";
 import logger from "../config/logger";
 import { InternalError, UnauthorizedError } from "../errors/AppError";
 import { sendError } from "../utils/sendError";
@@ -23,15 +24,8 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
     return;
   }
 
-  const accessSecret = process.env.ACCESS_TOKEN_SECRET;
-  if (!accessSecret) {
-    logger.error({ message: "ACCESS_TOKEN_SECRET non défini" });
-    sendError(res, new InternalError());
-    return;
-  }
-
   try {
-    const payload = jwt.verify(token, accessSecret) as JwtPayload;
+    const payload = jwt.verify(token, env.ACCESS_TOKEN_SECRET) as JwtPayload;
 
     if (typeof payload.userId !== "number") {
       sendError(res, new UnauthorizedError("Token invalide", "TOKEN_INVALID"));

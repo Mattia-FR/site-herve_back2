@@ -1,21 +1,14 @@
 import mysql, { type Pool } from "mysql2/promise";
-
-const { DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT } = process.env;
-
-if (!DB_HOST || !DB_USER || !DB_PASSWORD || !DB_NAME) {
-  throw new Error(
-    "Variables d'environnement de base de données manquantes (DB_HOST, DB_USER, DB_PASSWORD, DB_NAME)"
-  );
-}
+import { env } from "../config/env";
 
 type PoolQueryParams = Parameters<Pool["query"]>[1];
 
 const pool = mysql.createPool({
-  host: DB_HOST,
-  port: DB_PORT ? Number(DB_PORT) : 3306,
-  user: DB_USER,
-  password: DB_PASSWORD,
-  database: DB_NAME,
+  host: env.DB_HOST,
+  port: env.DB_PORT,
+  user: env.DB_USER,
+  password: env.DB_PASSWORD,
+  database: env.DB_NAME,
   waitForConnections: true,
   connectionLimit: 10,
 });
