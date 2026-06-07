@@ -1,6 +1,8 @@
 import type { ResultSetHeader } from "mysql2";
+import type { PaginatedResponse } from "../types/pagination";
 import type { GuestbookEntry, GuestbookUpdateData } from "../types/guestbook";
-import pool, { query } from "./db";
+import { paginateQuery } from "../utils/db/paginate";
+import pool from "./db";
 import {
   GUESTBOOK_SELECT,
   type GuestbookEntryRow,
@@ -8,9 +10,17 @@ import {
   mapRowToEntry,
 } from "./guestbookModel";
 
-const findAll = async (): Promise<GuestbookEntry[]> => {
-  const rows = await query<GuestbookEntryRow[]>(`${GUESTBOOK_SELECT} ORDER BY created_at DESC`);
-  return rows.map(mapRowToEntry);
+const findPaginated = async (
+  page: number,
+  limit: number,
+): Promise<PaginatedResponse<GuestbookEntry>> => {
+  return paginateQuery<GuestbookEntryRow, GuestbookEntry>({
+    selectSql: `${GUESTBOOK_SELECT} ORDER BY created_at DESC`,
+    countSql: "SELECT COUNT(*) AS total FROM guestbook_entries",
+    page,
+    limit,
+    mapRow: mapRowToEntry,
+  });
 };
 
 const update = async (id: number, data: GuestbookUpdateData): Promise<GuestbookEntry | null> => {
@@ -31,4 +41,4 @@ const deleteById = async (id: number): Promise<boolean> => {
   return result.affectedRows > 0;
 };
 
-export default { findAll, findById, update, deleteById };
+export default { findPaginated, findById, update, deleteById };

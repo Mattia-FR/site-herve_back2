@@ -3,12 +3,19 @@ import type { z } from "zod";
 import { NotFoundError } from "../errors/AppError";
 import guestbookAdminModel from "../models/guestbookAdminModel";
 import { asyncHandler } from "../utils/asyncHandler";
-import { getValidatedBody, getValidatedId } from "../utils/http/requestHelpers";
+import {
+  getValidatedBody,
+  getValidatedId,
+  getValidatedQuery,
+} from "../utils/http/requestHelpers";
 import type { guestbookUpdateSchema } from "../validation/guestbook.schemas";
+import type { adminPaginationQuerySchema } from "../validation/pagination.schemas";
 
-const browseAll = asyncHandler(async (_req: Request, res: Response) => {
-  const entries = await guestbookAdminModel.findAll();
-  res.status(200).json(entries);
+const browseAll = asyncHandler(async (req: Request, res: Response) => {
+  const { page, limit } =
+    getValidatedQuery<z.infer<typeof adminPaginationQuerySchema>>(req);
+  const result = await guestbookAdminModel.findPaginated(page, limit);
+  res.status(200).json(result);
 });
 
 const read = asyncHandler(async (req: Request, res: Response) => {

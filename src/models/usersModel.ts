@@ -1,6 +1,5 @@
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
-import { NotFoundError } from "../errors/AppError";
-import type { User, UserCreateData } from "../types/users";
+import type { User } from "../types/users";
 import { toDateString } from "../utils/string/dateHelpers";
 import pool, { query } from "./db";
 
@@ -51,16 +50,6 @@ const findByEmail = async (email: string): Promise<(User & { password: string })
   return { ...mapRowToUser(rows[0]), password: rows[0].password };
 };
 
-const create = async (data: UserCreateData): Promise<User> => {
-  const [result] = await pool.query<ResultSetHeader>(
-    "INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
-    [data.username, data.email, data.password]
-  );
-  const user = await findById(result.insertId);
-  if (!user) throw new NotFoundError("Utilisateur");
-  return user;
-};
-
 const saveRefreshToken = async (userId: number, tokenHash: string): Promise<void> => {
   await pool.query("UPDATE users SET refresh_token_hash = ? WHERE id = ?", [tokenHash, userId]);
 };
@@ -95,7 +84,6 @@ const rotateRefreshToken = async (
 export default {
   findById,
   findByEmail,
-  create,
   saveRefreshToken,
   findRefreshTokenHash,
   clearRefreshToken,

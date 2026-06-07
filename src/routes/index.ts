@@ -5,6 +5,7 @@ import authRouter from "./authRouter";
 import articlesRouter from "./articlesRouter";
 import artistRouter from "./artistRouter";
 import categoriesRouter from "./categoriesRouter";
+import clientLogsRouter from "./clientLogsRouter";
 import guestbookRouter from "./guestbookRouter";
 import imagesRouter from "./imagesRouter";
 import messagesRouter from "./messagesRouter";
@@ -20,6 +21,7 @@ router.get("/health", async (_req, res) => {
   }
 });
 
+router.use("/client-logs", clientLogsRouter);
 router.use("/auth", authRouter);
 router.use("/artist", artistRouter);
 router.use("/articles", articlesRouter);

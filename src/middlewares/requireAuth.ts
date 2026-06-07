@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env";
-import logger from "../config/logger";
+import { logError } from "../utils/log/logHelpers";
 import { InternalError, UnauthorizedError } from "../errors/AppError";
 import { sendError } from "../utils/sendError";
 
@@ -43,7 +43,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
       sendError(res, new UnauthorizedError("Token invalide", "TOKEN_INVALID"));
       return;
     }
-    logger.error({ message: "Erreur vérification token", err, requestId: req.requestId });
+    logError("Erreur vérification token", err, req);
     sendError(res, new InternalError());
   }
 }

@@ -22,12 +22,33 @@ const envSchema = z.object({
   IMAGE_BASE_URL: z.string().url().optional(),
   LOG_LEVEL: z.string().optional(),
   LOG_DIR: z.string().optional(),
+  CLIENT_LOG_ENABLED: z
+    .string()
+    .optional()
+    .transform((v) => v === "true"),
+  EMAIL_ENABLED: z
+    .string()
+    .optional()
+    .transform((v) => v === "true"),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_SECURE: z
+    .string()
+    .optional()
+    .transform((v) => v === "true"),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().optional(),
+  NOTIFY_EMAIL: z.string().email().optional(),
 });
 
 export type Env = z.infer<typeof envSchema> & {
   CORS_ORIGIN: string;
   API_URL: string;
   IMAGE_BASE_URL: string;
+  CLIENT_LOG_ENABLED: boolean;
+  EMAIL_ENABLED: boolean;
+  SMTP_SECURE: boolean;
 };
 
 function formatZodIssues(error: z.ZodError): string[] {
@@ -61,11 +82,38 @@ function loadEnv(): Env {
     }
   }
 
+  const EMAIL_ENABLED = data.EMAIL_ENABLED ?? false;
+
+  if (EMAIL_ENABLED && isProduction) {
+    const missing: string[] = [];
+    if (!data.SMTP_HOST) missing.push("SMTP_HOST");
+    if (!data.SMTP_USER) missing.push("SMTP_USER");
+    if (!data.SMTP_PASS) missing.push("SMTP_PASS");
+    if (!data.SMTP_FROM) missing.push("SMTP_FROM");
+    if (!data.NOTIFY_EMAIL) missing.push("NOTIFY_EMAIL");
+    if (missing.length > 0) {
+      console.error(
+        `Démarrage impossible — email activé en production, variables manquantes : ${missing.join(", ")}`
+      );
+      process.exit(1);
+    }
+  }
+
   const API_URL = data.API_URL ?? DEV_DEFAULTS.API_URL;
   const CORS_ORIGIN = data.CORS_ORIGIN ?? DEV_DEFAULTS.CORS_ORIGIN;
   const IMAGE_BASE_URL = data.IMAGE_BASE_URL ?? API_URL;
+  const CLIENT_LOG_ENABLED = data.CLIENT_LOG_ENABLED ?? false;
+  const SMTP_SECURE = data.SMTP_SECURE ?? false;
 
-  return { ...data, CORS_ORIGIN, API_URL, IMAGE_BASE_URL };
+  return {
+    ...data,
+    CORS_ORIGIN,
+    API_URL,
+    IMAGE_BASE_URL,
+    CLIENT_LOG_ENABLED,
+    EMAIL_ENABLED,
+    SMTP_SECURE,
+  };
 }
 
 export const env = loadEnv();

@@ -15,6 +15,7 @@ import {
   getValidatedBody,
   getValidatedId,
   getValidatedParams,
+  getValidatedQuery,
 } from "../utils/http/requestHelpers";
 import { processUploadedImage } from "../utils/image/processUploadedImage";
 import { toMySQLDatetime } from "../utils/string/dateHelpers";
@@ -23,10 +24,13 @@ import type {
   articleUpdateSchema,
   slugParamSchema,
 } from "../validation/articles.schemas";
+import type { adminPaginationQuerySchema } from "../validation/pagination.schemas";
 
-const browseAll = asyncHandler(async (_req: Request, res: Response) => {
-  const articles = await articlesAdminModel.findAllForAdmin();
-  res.status(200).json(articles);
+const browseAll = asyncHandler(async (req: Request, res: Response) => {
+  const { page, limit } =
+    getValidatedQuery<z.infer<typeof adminPaginationQuerySchema>>(req);
+  const result = await articlesAdminModel.findPaginated(page, limit);
+  res.status(200).json(result);
 });
 
 const readById = asyncHandler(async (req: Request, res: Response) => {

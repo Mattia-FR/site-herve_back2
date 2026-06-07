@@ -1,5 +1,7 @@
 import sharp from "sharp";
 import pool from "../models/db";
+import mailService from "../services/mailService";
+import { logError } from "../utils/log/logHelpers";
 import { env } from "./env";
 import logger from "./logger";
 import { ensureUploadDirs } from "./uploadsPaths";
@@ -15,11 +17,12 @@ export async function checkStartup(): Promise<void> {
     await ensureUploadDirs();
     await pool.query("SELECT 1");
     logger.info({ message: "Connexion à la base de données OK" });
+
+    if (env.EMAIL_ENABLED) {
+      await mailService.verifyTransporter();
+    }
   } catch (err) {
-    logger.error({
-      message: "Démarrage impossible — connexion à la base de données échouée",
-      err,
-    });
+    logError("Démarrage impossible", err);
     process.exit(1);
   }
 }

@@ -12,7 +12,13 @@ import {
   uploadFeaturedImage,
 } from "../controllers/articlesAdminController";
 import { validateMagicBytes } from "../middlewares/validateMagicBytes";
-import { requireValidId, validateBody, validateParams } from "../middlewares/validationMiddleware";
+import {
+  requireValidId,
+  validateBody,
+  validateParams,
+  validateQuery,
+} from "../middlewares/validationMiddleware";
+import { adminPaginationQuerySchema } from "../validation/pagination.schemas";
 import {
   articleCreateSchema,
   articleUpdateSchema,
@@ -21,7 +27,7 @@ import {
 
 const router = Router();
 
-router.get("/", browseAll);
+router.get("/", validateQuery(adminPaginationQuerySchema), browseAll);
 router.get("/slug/:slug", validateParams(slugParamSchema), readBySlug);
 router.post(
   "/content-images",

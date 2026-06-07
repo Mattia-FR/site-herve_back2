@@ -80,6 +80,16 @@ const uploadsStaticOptions =
     : { maxAge: 0 };
 
 app.use("/uploads", express.static(UPLOADS_ROOT, uploadsStaticOptions));
+
+app.use(
+  "/api/client-logs",
+  rateLimit({
+    ...rateLimitBase,
+    windowMs: 15 * 60 * 1000,
+    limit: 30,
+  }),
+);
+
 app.use("/api", router);
 
 setImmediate(() => {

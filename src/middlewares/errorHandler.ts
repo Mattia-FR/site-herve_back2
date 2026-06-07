@@ -1,6 +1,6 @@
 import type { ErrorRequestHandler } from "express";
 import multer from "multer";
-import logger from "../config/logger";
+import { logError } from "../utils/log/logHelpers";
 import { AppError, BadRequestError, InternalError, ValidationError } from "../errors/AppError";
 import { sendError } from "../utils/sendError";
 
@@ -20,13 +20,7 @@ const MULTER_MESSAGES: Record<string, { message: string; code: string }> = {
 };
 
 export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
-  logger.error({
-    message: err instanceof Error ? err.message : "Unknown error",
-    requestId: req.requestId,
-    method: req.method,
-    path: req.originalUrl,
-    err,
-  });
+  logError("Erreur non gérée", err, req);
 
   if (err instanceof AppError) {
     sendError(res, err);

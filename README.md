@@ -13,7 +13,7 @@ Ce dépôt couvre la **couche backend**. L'application complète nécessite auss
 - Profil artiste et paramètres page d'accueil (`GET /api/artist/`)
 - Articles publiés (liste, aperçu accueil, détail par slug ou id)
 - Galerie par catégories (carousel, filtre par slug)
-- Contact et livre d'or avec honeypot anti-spam et modération
+- Contact et livre d'or avec honeypot anti-spam, modération et **notifications email** (opt-in)
 
 ### API admin (JWT Bearer)
 
@@ -64,6 +64,7 @@ flowchart LR
 - **Zod 4** — validation body/query/params
 - **Helmet**, **express-rate-limit**, **CORS** — sécurité HTTP
 - **Winston** — logs structurés (JSON en prod)
+- **Nodemailer** — notifications SMTP (contact, livre d'or)
 - **Biome** — lint et format
 
 ## Démarrage rapide
@@ -115,6 +116,29 @@ Voir [`.env.sample`](./.env.sample).
 | `API_URL`, `IMAGE_BASE_URL` | Non | URLs publiques (CSP, liens images) |
 | `NODE_ENV` | Non | `development` / `production` |
 | `LOG_LEVEL`, `LOG_DIR` | Non | Configuration Winston |
+| `CLIENT_LOG_ENABLED` | Non | Remontée d'erreurs client (`true` pour activer) |
+| `EMAIL_ENABLED` | Non | Notifications email contact/livre d'or (`true` pour activer) |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE` | Si email activé (prod) | Serveur SMTP (ex. OVH : `ssl0.ovh.net`, port `587`, `SMTP_SECURE=false`) |
+| `SMTP_USER`, `SMTP_PASS` | Si email activé (prod) | Identifiants SMTP |
+| `SMTP_FROM` | Si email activé (prod) | Expéditeur, ex. `"Site Hervé Petit <contact@domaine.fr>"` |
+| `NOTIFY_EMAIL` | Si email activé (prod) | Destinataire des alertes (l'artiste) |
+
+En développement, laisser `EMAIL_ENABLED` absent ou `false` — aucune config SMTP requise.
+
+Exemple production (OVH) :
+
+```env
+EMAIL_ENABLED=true
+SMTP_HOST=ssl0.ovh.net
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=contact@votredomaine.fr
+SMTP_PASS=***
+SMTP_FROM="Site Hervé Petit <contact@votredomaine.fr>"
+NOTIFY_EMAIL=artiste@example.com
+```
+
+Lors d'un message contact ou d'une entrée livre d'or, l'artiste reçoit un email texte avec lien vers l'admin (`/admin/messages` ou `/admin/guestbook`). L'envoi est asynchrone : un échec SMTP n'empêche pas l'enregistrement en base.
 
 ## Routes principales
 

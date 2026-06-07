@@ -11,12 +11,6 @@ export interface User {
   updated_at: string;
 }
 
-export interface UserCreateData {
-  username: string;
-  email: string;
-  password: string;
-}
-
 export interface UserUpdateData {
   username?: string;
   email?: string;

@@ -1,11 +1,21 @@
 import type { ResultSetHeader } from "mysql2";
+import type { PaginatedResponse } from "../types/pagination";
 import type { Message, MessageUpdateData } from "../types/messages";
-import pool, { query } from "./db";
+import { paginateQuery } from "../utils/db/paginate";
+import pool from "./db";
 import { MESSAGE_SELECT, type MessageRow, findById, mapRowToMessage } from "./messagesModel";
 
-const findAll = async (): Promise<Message[]> => {
-  const rows = await query<MessageRow[]>(`${MESSAGE_SELECT} ORDER BY created_at DESC`);
-  return rows.map(mapRowToMessage);
+const findPaginated = async (
+  page: number,
+  limit: number,
+): Promise<PaginatedResponse<Message>> => {
+  return paginateQuery<MessageRow, Message>({
+    selectSql: `${MESSAGE_SELECT} ORDER BY created_at DESC`,
+    countSql: "SELECT COUNT(*) AS total FROM contact_messages",
+    page,
+    limit,
+    mapRow: mapRowToMessage,
+  });
 };
 
 const update = async (id: number, data: MessageUpdateData): Promise<Message | null> => {
@@ -27,4 +37,4 @@ const deleteById = async (id: number): Promise<boolean> => {
   return result.affectedRows > 0;
 };
 
-export default { findAll, findById, update, deleteById };
+export default { findPaginated, findById, update, deleteById };

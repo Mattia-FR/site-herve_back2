@@ -4,7 +4,7 @@ import type { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { argon2Options } from "../config/argon2";
 import { env } from "../config/env";
-import logger from "../config/logger";
+import { logError } from "../utils/log/logHelpers";
 import { InternalError, UnauthorizedError } from "../errors/AppError";
 import usersModel from "../models/usersModel";
 import { asyncHandler } from "../utils/asyncHandler";
@@ -124,7 +124,7 @@ const refresh = asyncHandler(async (req: Request, res: Response) => {
       sendError(res, new UnauthorizedError("Session expirée", "TOKEN_EXPIRED"));
       return;
     }
-    logger.error({ message: "Erreur refresh token", err, requestId: req.requestId });
+    logError("Erreur refresh token", err, req);
     sendError(res, new InternalError());
   }
 });

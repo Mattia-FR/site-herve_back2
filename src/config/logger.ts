@@ -5,8 +5,10 @@
  * Dev : format colorisé lisible (HH:mm:ss level: message {meta}).
  * Prod : JSON sur stdout + fichiers error.log / combined.log.
  * Env : LOG_LEVEL (défaut : debug en dev, info en prod).
+ * Sécurité : redaction automatique des champs sensibles via logRedact.
  */
 import winston from "winston";
+import { redact } from "../utils/log/logRedact";
 
 const { combine, timestamp, printf, colorize, errors } = winston.format;
 
@@ -30,7 +32,20 @@ winston.addColors({
   debug: "blue",
 });
 
+/** Redacte les champs sensibles sans recréer l'objet info (préserve les symboles triple-beam). */
+const redactFormat = winston.format((info) => {
+  for (const key of Object.keys(info)) {
+    if (key === "level") continue;
+    const value = info[key as keyof typeof info];
+    if (value !== undefined) {
+      (info as Record<string, unknown>)[key] = redact(value);
+    }
+  }
+  return info;
+});
+
 const devFormat = combine(
+  redactFormat(),
   colorize(),
   timestamp({ format: "HH:mm:ss" }),
   errors({ stack: true }),
@@ -44,7 +59,12 @@ const devFormat = combine(
   })
 );
 
-const prodFormat = combine(timestamp(), errors({ stack: true }), winston.format.json());
+const prodFormat = combine(
+  redactFormat(),
+  timestamp(),
+  errors({ stack: true }),
+  winston.format.json(),
+);
 
 const logger = winston.createLogger({
   level: logLevel,

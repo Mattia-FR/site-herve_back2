@@ -10,7 +10,12 @@ import {
   setCategories,
 } from "../controllers/imagesAdminController";
 import { validateMagicBytes } from "../middlewares/validateMagicBytes";
-import { requireValidId, validateBody } from "../middlewares/validationMiddleware";
+import {
+  requireValidId,
+  validateBody,
+  validateQuery,
+} from "../middlewares/validationMiddleware";
+import { adminPaginationQuerySchema } from "../validation/pagination.schemas";
 import {
   imageCategoriesSchema,
   imageMetadataSchema,
@@ -19,7 +24,7 @@ import {
 
 const router = Router();
 
-router.get("/", browse);
+router.get("/", validateQuery(adminPaginationQuerySchema), browse);
 router.get("/:id", requireValidId(), read);
 router.post(
   "/",

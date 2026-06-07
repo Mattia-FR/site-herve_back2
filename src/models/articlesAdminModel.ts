@@ -1,16 +1,26 @@
 import type { ResultSetHeader } from "mysql2";
 import { NotFoundError } from "../errors/AppError";
+import type { PaginatedResponse } from "../types/pagination";
 import type { Article, ArticleCreateData, ArticleUpdateData } from "../types/articles";
 import { buildUpdateQuery } from "../utils/db/buildUpdateQuery";
+import { paginateQuery } from "../utils/db/paginate";
 import { toMySQLDatetime } from "../utils/string/dateHelpers";
 import { createExcerpt } from "../utils/string/excerpt";
 import { applySlugIfChanged, buildSlug } from "../utils/string/slug";
 import { type ArticleRow, DETAIL_SELECT, LIST_SELECT, mapRow } from "./articlesModel";
 import pool, { query } from "./db";
 
-const findAllForAdmin = async (): Promise<Article[]> => {
-  const rows = await query<ArticleRow[]>(`${LIST_SELECT} ORDER BY a.updated_at DESC`);
-  return rows.map((r) => mapRow(r));
+const findPaginated = async (
+  page: number,
+  limit: number,
+): Promise<PaginatedResponse<Article>> => {
+  return paginateQuery<ArticleRow, Article>({
+    selectSql: `${LIST_SELECT} ORDER BY a.updated_at DESC`,
+    countSql: "SELECT COUNT(*) AS total FROM articles a",
+    page,
+    limit,
+    mapRow: (r) => mapRow(r),
+  });
 };
 
 const findByIdForAdmin = async (id: number): Promise<Article | null> => {
@@ -73,7 +83,7 @@ const deleteById = async (id: number): Promise<boolean> => {
 };
 
 export default {
-  findAllForAdmin,
+  findPaginated,
   findByIdForAdmin,
   findBySlugForAdmin,
   create,

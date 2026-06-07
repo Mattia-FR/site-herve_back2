@@ -9,6 +9,7 @@ import {
   getUploadedFile,
   getValidatedBody,
   getValidatedId,
+  getValidatedQuery,
 } from "../utils/http/requestHelpers";
 import { processUploadedImage } from "../utils/image/processUploadedImage";
 import type {
@@ -16,10 +17,13 @@ import type {
   imageMetadataSchema,
   imageUpdateSchema,
 } from "../validation/images.schemas";
+import type { adminPaginationQuerySchema } from "../validation/pagination.schemas";
 
-const browse = asyncHandler(async (_req: Request, res: Response) => {
-  const images = await imagesAdminModel.findAll();
-  res.status(200).json(images);
+const browse = asyncHandler(async (req: Request, res: Response) => {
+  const { page, limit } =
+    getValidatedQuery<z.infer<typeof adminPaginationQuerySchema>>(req);
+  const result = await imagesAdminModel.findPaginated(page, limit);
+  res.status(200).json(result);
 });
 
 const add = asyncHandler(async (req: Request, res: Response) => {

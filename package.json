@@ -24,6 +24,7 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.2",
     "mysql2": "^3.10.0",
+    "nodemailer": "^8.0.10",
     "sharp": "^0.33.5",
     "slugify": "^1.6.9",
     "winston": "^3.19.0",
@@ -37,6 +38,7 @@
     "@types/jsonwebtoken": "^9.0.9",
     "@types/multer": "^1.4.12",
     "@types/node": "^20.14.0",
+    "@types/nodemailer": "^8.0.0",
     "nodemon": "^3.1.9",
     "ts-node": "^10.9.2",
     "typescript": "^5.5.0"

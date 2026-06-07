@@ -2,10 +2,15 @@ import fs from "node:fs/promises";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import { resolveUploadPath } from "../config/uploadsPaths";
 import { NotFoundError, ValidationError } from "../errors/AppError";
+import type { PaginatedResponse } from "../types/pagination";
 import type { ImageCreateData, ImageUpdateData, ImageWithUrl } from "../types/images";
 import { buildUpdateQuery } from "../utils/db/buildUpdateQuery";
+import { paginateQuery } from "../utils/db/paginate";
 import pool, { query } from "./db";
 import { type ImageRow, findById, mapRowToImage, mapToImageWithUrl } from "./imagesModel";
+
+const IMAGE_ADMIN_SELECT =
+  "SELECT id, title, description, path, alt_descr, is_in_gallery, display_order, user_id, article_id, variants, created_at, updated_at FROM images";
 
 async function unlinkSilent(relativePath: string): Promise<void> {
   try {
@@ -15,11 +20,17 @@ async function unlinkSilent(relativePath: string): Promise<void> {
   }
 }
 
-const findAll = async (): Promise<ImageWithUrl[]> => {
-  const rows = await query<ImageRow[]>(
-    "SELECT id, title, description, path, alt_descr, is_in_gallery, display_order, user_id, article_id, variants, created_at, updated_at FROM images ORDER BY created_at DESC"
-  );
-  return rows.map((r) => mapToImageWithUrl(mapRowToImage(r)));
+const findPaginated = async (
+  page: number,
+  limit: number,
+): Promise<PaginatedResponse<ImageWithUrl>> => {
+  return paginateQuery<ImageRow, ImageWithUrl>({
+    selectSql: `${IMAGE_ADMIN_SELECT} ORDER BY created_at DESC`,
+    countSql: "SELECT COUNT(*) AS total FROM images",
+    page,
+    limit,
+    mapRow: (r) => mapToImageWithUrl(mapRowToImage(r)),
+  });
 };
 
 interface ImageCategoryRow extends RowDataPacket {
@@ -114,7 +125,7 @@ const deleteById = async (id: number): Promise<boolean> => {
 };
 
 export default {
-  findAll,
+  findPaginated,
   findById,
   findCategoriesByImageId,
   create,

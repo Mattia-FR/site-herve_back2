@@ -3,12 +3,19 @@ import type { z } from "zod";
 import { NotFoundError } from "../errors/AppError";
 import messagesAdminModel from "../models/messagesAdminModel";
 import { asyncHandler } from "../utils/asyncHandler";
-import { getValidatedBody, getValidatedId } from "../utils/http/requestHelpers";
+import {
+  getValidatedBody,
+  getValidatedId,
+  getValidatedQuery,
+} from "../utils/http/requestHelpers";
 import type { messageUpdateSchema } from "../validation/messages.schemas";
+import type { adminPaginationQuerySchema } from "../validation/pagination.schemas";
 
-const browse = asyncHandler(async (_req: Request, res: Response) => {
-  const messages = await messagesAdminModel.findAll();
-  res.status(200).json(messages);
+const browse = asyncHandler(async (req: Request, res: Response) => {
+  const { page, limit } =
+    getValidatedQuery<z.infer<typeof adminPaginationQuerySchema>>(req);
+  const result = await messagesAdminModel.findPaginated(page, limit);
+  res.status(200).json(result);
 });
 
 const read = asyncHandler(async (req: Request, res: Response) => {
