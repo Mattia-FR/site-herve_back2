@@ -1,7 +1,7 @@
 /**
  * Redaction des données sensibles avant écriture dans les logs.
  *
- * Couche : Utils log — appliqué par logger.ts (format Winston) et logHelpers.
+ * Couche : Utils log — appliqué uniquement par logger.ts (format Winston).
  * Masque : mots de passe, tokens JWT, cookies, clés API (pattern insensible à la casse).
  */
 /** Clés dont la valeur doit être masquée dans les logs (comparaison insensible à la casse). */
@@ -22,15 +22,22 @@ function truncate(value: string): string {
 function redactString(value: string): string {
   let out = truncate(value);
   out = out.replace(/\b(Bearer\s+)[A-Za-z0-9._-]+/gi, `$1${REDACTED}`);
-  out = out.replace(
-    /\b(refreshToken|accessToken|password)=([^&\s]+)/gi,
-    `$1=${REDACTED}`,
-  );
+  out = out.replace(/\b(refreshToken|accessToken|password)=([^&\s]+)/gi, `$1=${REDACTED}`);
   return out;
 }
 
 function shouldRedactKey(key: string): boolean {
   return SENSITIVE_KEY_PATTERN.test(key);
+}
+
+/**
+ * Redacte une entrée de log Winston (clé + valeur) en préservant la logique par clé sensible.
+ */
+export function redactLogField(key: string, value: unknown): unknown {
+  if (shouldRedactKey(key)) {
+    return REDACTED;
+  }
+  return redact(value);
 }
 
 /**

@@ -1,7 +1,27 @@
+/**
+ * Model — statistiques du tableau de bord admin.
+ *
+ * Rôle : agréger en une seule requête SQL tous les compteurs affichés
+ * sur le dashboard admin.
+ *
+ * Technique : sous-requêtes scalaires dans le SELECT pour obtenir tous
+ * les compteurs en une seule passe sur la base de données, sans jointures
+ * complexes ni requêtes multiples.
+ *
+ * Compteurs retournés :
+ *   - articles.published / articles.draft
+ *   - categories.total
+ *   - images.in_gallery
+ *   - guestbook.approved / guestbook.pending
+ *   - messages.unread
+ *
+ * Table concernées : articles, categories, images, guestbook_entries, contact_messages
+ */
 import type { RowDataPacket } from "mysql2";
 import type { AdminStats } from "../types/stats";
 import { query } from "./db";
 
+/** Interface du résultat SQL brut pour les statistiques admin. */
 interface AdminStatsRow extends RowDataPacket {
   articles_published: number;
   articles_draft: number;
@@ -12,6 +32,11 @@ interface AdminStatsRow extends RowDataPacket {
   messages_unread: number;
 }
 
+/**
+ * Requête d'agrégation : calcule tous les compteurs en une seule passe.
+ * Les sous-requêtes scalaires sont plus lisibles et suffisamment performantes
+ * pour un dashboard avec des données de taille raisonnable.
+ */
 const ADMIN_STATS_SELECT = `
   SELECT
     (SELECT COUNT(*) FROM articles WHERE status = 'published') AS articles_published,
@@ -22,6 +47,7 @@ const ADMIN_STATS_SELECT = `
     (SELECT COUNT(*) FROM guestbook_entries WHERE status = 'pending') AS guestbook_pending,
     (SELECT COUNT(*) FROM contact_messages WHERE status = 'unread') AS messages_unread`;
 
+/** Transforme la ligne SQL brute en objet AdminStats structuré par domaine. */
 const mapRowToAdminStats = (row: AdminStatsRow): AdminStats => ({
   articles: {
     published: Number(row.articles_published) || 0,
@@ -42,6 +68,7 @@ const mapRowToAdminStats = (row: AdminStatsRow): AdminStats => ({
   },
 });
 
+/** Retourne les statistiques agrégées du dashboard admin. */
 const getAdminStats = async (): Promise<AdminStats> => {
   const rows = await query<AdminStatsRow[]>(ADMIN_STATS_SELECT);
   return mapRowToAdminStats(rows[0]);

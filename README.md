@@ -1,10 +1,24 @@
-> **English summary** — REST API for a full-stack artist portfolio and CMS built with Node.js, Express, MySQL, and TypeScript. JWT auth with refresh rotation, image pipeline (Sharp/WebP), Zod validation, anti-spam, and a complete admin surface. Requires the companion frontend: [site-herve_front2](https://github.com/Mattia-FR/site-herve_front2).
+> **English summary** — Production-ready REST API for a full-stack artist portfolio and CMS built with Node.js, Express, MySQL, and TypeScript. JWT auth with refresh rotation, Sharp/WebP image pipeline, Zod validation, anti-spam (honeypot + rate limiting), structured logging (Winston), and optional SMTP notifications. Powers the live site [herve-petit.com](https://www.herve-petit.com). Companion frontend: [site-herve_front2](https://github.com/Mattia-FR/site-herve_front2).
 
 # API site Hervé — back2
 
-Backend REST pour un site d'artiste peintre : articles, galerie, contact, livre d'or et administration sécurisée par JWT.
+Backend REST d'un CMS sur mesure pour un artiste peintre — articles, galerie, contact, livre d'or et administration sécurisée par JWT. **En production** derrière [herve-petit.com](https://www.herve-petit.com) (reverse proxy Nginx).
+
+Refonte (v2) d'une première version (`Back` / `Front`) en TypeScript strict : Zod 4, pipeline Sharp, Winston, contrat d'erreurs partagé avec le frontend, séparation public/admin au niveau MVC.
 
 Ce dépôt couvre la **couche backend**. L'application complète nécessite aussi le frontend [site-herve_front2](https://github.com/Mattia-FR/site-herve_front2).
+
+## Points forts techniques
+
+- **Auth JWT robuste** — access token 15 min + refresh rotatif en cookie httpOnly, hash Argon2id en base
+- **Sécurité HTTP** — Helmet (CSP), CORS, rate limiting par route, honeypot silencieux sur contact et livre d'or
+- **Pipeline média** — Multer → validation magic bytes → Sharp (3 variants WebP) → rollback en cas d'erreur
+- **Architecture MVC stricte** — routeurs, controllers et models **public vs admin séparés**
+- **Validation Zod 4** — body/query/params, schémas synchronisés avec Front2
+- **Gestion d'erreurs centralisée** — hiérarchie `AppError`, contrat `{ success, code, message, details? }`
+- **Observabilité** — Winston JSON en prod, `requestId` par requête, health check MySQL (`GET /api/health`)
+- **Production-ready** — fail-fast au démarrage, `trust proxy`, déploiement Nginx documenté
+- **Qualité de code** — TypeScript strict, Biome — pas de suite de tests automatisée (choix assumé, comme Front2)
 
 ## Fonctionnalités clés
 
@@ -25,14 +39,7 @@ Ce dépôt couvre la **couche backend**. L'application complète nécessite auss
 | Catégories | CRUD avec ordre d'affichage |
 | Messages | Liste, détail, changement de statut, suppression |
 | Livre d'or | Modération (pending / approved / spam) |
-| Profil | `GET/PUT /api/admin/users/me` |
-| Paramètres site | `GET/PUT /api/admin/site` — hero, citation (page d'accueil) |
-
-### Sécurité et traitement média
-
-- JWT access (15 min) + refresh rotatif en cookie httpOnly (hash Argon2id en base)
-- Helmet (CSP), CORS, rate limiting, validation Zod
-- Pipeline Sharp : variants WebP multi-tailles, rotation EXIF, validation magic bytes (max 10 Mo)
+| Profil | `GET/PUT /api/admin/users/me` (bio, textes page d'accueil) |
 
 ## Architecture
 
@@ -48,7 +55,7 @@ flowchart LR
 |-----------|------|
 | **front2** | SPA React, pages publiques, admin |
 | **back2** (ce dépôt) | API REST, auth JWT, uploads, modération |
-| **MySQL** | Données métier (7 tables + site_settings) |
+| **MySQL** | Données métier (7 tables) |
 | **uploads/** | Fichiers image locaux (gallery/, content/, featured/) |
 
 ## Stack technique
@@ -56,6 +63,7 @@ flowchart LR
 ![Node.js](https://img.shields.io/badge/Node.js-Express-339933?logo=nodedotjs&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?logo=typescript&logoColor=white)
 ![MySQL](https://img.shields.io/badge/MySQL-8-4479A1?logo=mysql&logoColor=white)
+![JWT](https://img.shields.io/badge/JWT-Auth-000000?logo=jsonwebtokens&logoColor=white)
 
 - **Express 4** + **TypeScript** (strict, ES2022)
 - **MySQL2** — pool de connexions, requêtes paramétrées
@@ -142,51 +150,14 @@ Lors d'un message contact ou d'une entrée livre d'or, l'artiste reçoit un emai
 
 ## Routes principales
 
-### Racine et fichiers
+| Domaine | Préfixe | Auth | Exemples |
+|---------|---------|------|----------|
+| Health & static | `/`, `/uploads/*`, `/api/health` | Non | Liveness + fichiers WebP |
+| Auth | `/api/auth/*` | Non | login, refresh, logout |
+| Public | `/api/artist`, `/api/articles`, `/api/images`, `/api/categories`, `/api/messages`, `/api/guestbook` | Non | Lecture + POST contact/livre d'or (honeypot `website`) |
+| Admin | `/api/admin/*` | Bearer JWT | CRUD articles, images, catégories, modération, stats, profil, site settings |
 
-| Méthode | Route | Auth |
-|---------|-------|------|
-| GET | `/` | Non |
-| GET | `/uploads/*` | Non (statique) |
-| GET | `/api/health` | Non → `{ status: "ok" }` |
-
-### Auth
-
-| Méthode | Route | Description |
-|---------|-------|-------------|
-| POST | `/api/auth/login` | `{ email, password }` → `{ accessToken, user }` + cookie refresh |
-| POST | `/api/auth/refresh` | Cookie refresh → `{ accessToken }` |
-| POST | `/api/auth/logout` | 204, invalide refresh |
-
-### Public
-
-| Méthode | Route |
-|---------|-------|
-| GET | `/api/artist/` |
-| GET | `/api/articles/homepage-preview` |
-| GET | `/api/articles/published` |
-| GET | `/api/articles/published/id/:id` |
-| GET | `/api/articles/published/slug/:slug` |
-| GET | `/api/images/gallery/carousel` |
-| GET | `/api/images/gallery?category=slug` |
-| GET | `/api/categories/`, `/api/categories/:id` |
-| POST | `/api/messages/` (honeypot `website`) |
-| GET | `/api/guestbook/`, POST `/api/guestbook/` (honeypot `website`) |
-
-### Admin (Bearer JWT)
-
-Préfixe `/api/admin` — header `Authorization: Bearer <accessToken>`.
-
-| Domaine | Routes principales |
-|---------|-------------------|
-| Stats | `GET /stats` |
-| Articles | CRUD + `POST .../content-images`, `POST .../featured-image` |
-| Images | CRUD + `POST /` (multipart) + `PUT /:id/categories` |
-| Catégories | CRUD |
-| Messages | liste, détail, PATCH statut, DELETE |
-| Livre d'or | liste, PATCH statut, DELETE |
-| Profil | `GET/PUT /users/me` |
-| Site | `GET/PUT /site` |
+Détail complet des endpoints dans les routeurs `src/routes/`.
 
 ## Structure du code
 
@@ -202,23 +173,15 @@ src/
 ├── middlewares/           # auth, validation Zod, errorHandler, honeypot, magic bytes
 ├── validation/            # Schémas Zod par domaine
 ├── errors/                # Hiérarchie AppError
-├── types/                 # Types TS (artist, stats, siteSettings…)
+├── types/                 # Types TS (artist, stats, users…)
 └── utils/                 # asyncHandler, sendError, processImage, helpers
 ```
 
-Tables MySQL : `users`, `articles`, `images`, `categories`, `images_categories`, `contact_messages`, `guestbook_entries`, `site_settings`.
-
-## Points techniques
-
-- **Séparation public / admin** — routeurs, controllers et modèles distincts par couche
-- **Error handler centralisé** — hiérarchie `AppError`, gestion Multer et erreurs MySQL (`ER_DUP_ENTRY`, etc.)
-- **Contrat d'erreurs aligné frontend** — `{ success: false, code, message, details? }`
-- **Pipeline images** — upload → magic bytes → Sharp (variants WebP) → stockage JSON en DB, nettoyage en cas d'erreur
-- **Anti-spam** — honeypot silencieux (réponse 201 factice si bot), rate limiting par route
-- **Fail-fast au démarrage** — vérification secrets JWT, connexion DB, création dossiers `uploads/`
-- **Observabilité** — Winston structuré, `requestId` par requête, logs HTTP
+Tables MySQL : `users`, `articles`, `images`, `categories`, `images_categories`, `contact_messages`, `guestbook_entries`.
 
 ## Déploiement production
+
+Site de référence en production : [herve-petit.com](https://www.herve-petit.com).
 
 Variables essentielles : `NODE_ENV=production`, `CORS_ORIGIN` (URL du front), `IMAGE_BASE_URL` (URL publique pour les images), secrets JWT forts.
 

@@ -290,20 +290,11 @@ export async function runSeeds(connection: Connection): Promise<void> {
       last_name = "Petit",
       tagline = "Artiste peintre",
       bio = "Peintre passionné, j'explore les rapports entre la lumière, la matière et le portrait. Mon travail mêle techniques traditionnelles et recherches contemporaines pour donner vie à des compositions singulières.\n\nSur ce site, je partage mes réalisations, mon processus de création et les projets en cours. N'hésitez pas à parcourir la galerie et le blog pour découvrir mon univers.",
+      hero_text = "Bienvenue sur ce site. Vous y trouverez des articles, une galerie et un espace d'échange. N'hésitez pas à parcourir les différentes sections et à me contacter pour toute question.",
+      quote_text = "On comprendra un jour que Raphaël et Vermeer avaient déjà tout découvert en peinture. C'est pourquoi au lieu de persister fastidieusement à théoriser, pour tenter de redécouvrir la peinture... Peignons!",
+      quote_author = "Salvador Dalí",
       profile_image_id = 21
     WHERE id = 2
-  `);
-
-  // ============================================
-  // CONTENU PAGE D'ACCUEIL
-  // ============================================
-  await connection.query(`
-    INSERT INTO site_settings (id, hero_text, quote_text, quote_author) VALUES
-    (1,
-      "Bienvenue sur ce site. Vous y trouverez des articles, une galerie et un espace d'échange. N'hésitez pas à parcourir les différentes sections et à me contacter pour toute question.",
-      "On comprendra un jour que Raphaël et Vermeer avaient déjà tout découvert en peinture. C'est pourquoi au lieu de persister fastidieusement à théoriser, pour tenter de redécouvrir la peinture... Peignons!",
-      "Salvador Dalí"
-    )
   `);
 
   // ============================================

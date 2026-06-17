@@ -1,3 +1,12 @@
+/**
+ * Routes admin des catégories — /api/admin/categories
+ * (toutes protégées par requireAuth via adminRouter.ts)
+ *
+ * GET  /     → liste de toutes les catégories
+ * POST /     → créer une catégorie
+ * PUT  /:id  → modifier une catégorie existante
+ * DELETE /:id → supprimer une catégorie (échoue si des images y sont liées)
+ */
 import { Router } from "express";
 import { add, browse, destroy, edit } from "../controllers/categoriesAdminController";
 import { requireValidId, validateBody } from "../middlewares/validationMiddleware";

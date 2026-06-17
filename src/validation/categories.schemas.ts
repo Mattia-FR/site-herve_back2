@@ -1,9 +1,18 @@
 /**
  * Schémas Zod de validation pour les catégories de galerie.
+ *
+ * Rôle : valider les données de création et de mise à jour des catégories
+ * qui organisent la galerie d'images.
+ *
+ * Sync avec Front2 :
+ *   BASE partagée avec Front2/src/validation/schemas.ts — categoryFormSchema,
+ *   categoryUpdateFormSchema (aucun delta intentionnel).
+ *
+ * Schémas :
+ *   categoryCreateSchema → POST /api/admin/categories
+ *   categoryUpdateSchema → PUT /api/admin/categories/:id
  */
 import { z } from "zod";
-
-// sync with site-herve_front2/src/validation/schemas.ts
 
 /** Body POST /api/admin/categories. */
 export const categoryCreateSchema = z.object({

@@ -1,5 +1,14 @@
 /**
  * Schémas Zod de validation pour les rapports d'erreurs client.
+ *
+ * Rôle : valider les erreurs JavaScript remontées par le navigateur via
+ * POST /api/client-logs. Activé uniquement si ENABLE_CLIENT_LOGS=true.
+ *
+ * Schémas :
+ *   clientLogSchema → POST /api/client-logs
+ *
+ * Note : les champs sont tous optionnels sauf message, car la structure
+ * varie selon le type d'erreur côté navigateur.
  */
 import { z } from "zod";
 

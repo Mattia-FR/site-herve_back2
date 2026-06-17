@@ -1,9 +1,24 @@
 /**
- * Schémas Zod de validation pour les images.
+ * Schémas Zod de validation pour les images de galerie.
+ *
+ * Rôle : valider les corps de requête pour les routes images admin et publiques.
+ *
+ * Sync avec Front2 :
+ *   BASE partagée avec Front2/src/validation/schemas.ts — imageMetadataFormSchema,
+ *   imageCategoriesFormSchema.
+ *   DELTA Back2 intentionnel (imageMetadataSchema) : is_in_gallery, display_order et article_id
+ *   acceptent des strings via z.union + transform → Multer envoie tout en multipart/form-data,
+ *   les valeurs numériques et booléennes arrivent donc comme strings.
+ *   DELTA Back2 intentionnel (imageCategoriesSchema) : categoryIds.max(1)
+ *   → contrainte business (1 catégorie max par image) enforced côté API.
+ *
+ * Schémas :
+ *   imageMetadataSchema      → POST /api/admin/images (après upload Multer)
+ *   imageUpdateSchema        → PUT /api/admin/images/:id (JSON standard)
+ *   imageCategoriesSchema    → PUT /api/admin/images/:id/categories
+ *   galleryBrowseQuerySchema → GET /api/images/gallery (?category=slug)
  */
 import { z } from "zod";
-
-// sync with site-herve_front2/src/validation/schemas.ts
 
 /** Body POST /api/admin/images (métadonnées après upload Multer). */
 export const imageMetadataSchema = z.object({
@@ -12,7 +27,13 @@ export const imageMetadataSchema = z.object({
   alt_descr: z.string().max(255).nullable().optional(),
   is_in_gallery: z.union([z.boolean(), z.string().transform((v) => v === "true")]).optional(),
   display_order: z.union([z.number().int().min(0), z.string().transform(Number)]).optional(),
-  article_id: z.union([z.number().int().positive(), z.null()]).optional(),
+  article_id: z
+    .union([
+      z.number().int().positive(),
+      z.null(),
+      z.string().transform((v) => (v === "" ? null : Number(v))),
+    ])
+    .optional(),
 });
 
 /** Body PUT /api/admin/images/:id. */

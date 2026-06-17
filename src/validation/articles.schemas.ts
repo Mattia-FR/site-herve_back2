@@ -1,9 +1,24 @@
 /**
  * Schémas Zod de validation pour les articles.
+ *
+ * Rôle : valider les corps de requête et paramètres des routes articles admin
+ * et publiques avant transmission aux controllers.
+ *
+ * Sync avec Front2 :
+ *   BASE partagée avec Front2/src/validation/schemas.ts — articleCreateFormSchema,
+ *   articleUpdateFormSchema (aucun delta intentionnel).
+ *
+ * Schémas :
+ *   articleCreateSchema          → POST /api/admin/articles
+ *   articleUpdateSchema          → PUT /api/admin/articles/:id
+ *   articlesPublishedQuerySchema → GET /api/articles/published (?limit=)
+ *   slugParamSchema              → routes /published/slug/:slug et admin /slug/:slug
  */
 import { z } from "zod";
 
-// sync with site-herve_front2/src/validation/schemas.ts
+// Sync avec Front2 :
+// BASE partagée avec Front2/src/validation/schemas.ts — articleCreateFormSchema, articleUpdateFormSchema
+// (aucun delta intentionnel)
 
 /** Body POST /api/admin/articles. */
 export const articleCreateSchema = z.object({

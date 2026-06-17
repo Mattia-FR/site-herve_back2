@@ -1,12 +1,12 @@
 /**
  * Helpers de logging structuré avec contexte requête.
  *
- * Couche : Utils log — wrapper autour de logger Winston avec redaction automatique.
+ * Couche : Utils log — wrapper autour de logger Winston (structure + contexte).
+ * La redaction des champs sensibles est appliquée par le format Winston (logger.ts).
  * Utilisé par : errorHandler, requireAuth, startup, controllers en cas d'erreur.
  */
 import type { Request } from "express";
 import logger from "../../config/logger";
-import { redact } from "./logRedact";
 
 /** Contexte minimal extrait d'une requête Express pour enrichir les logs. */
 export interface RequestLogContext {
@@ -41,26 +41,20 @@ function serializeError(err: unknown): Record<string, unknown> {
 type LogMeta = Record<string, unknown>;
 
 /**
- * Log d'erreur structuré avec contexte requête et redaction centralisée.
+ * Log d'erreur structuré avec contexte requête.
  */
-export function logError(
-  message: string,
-  err: unknown,
-  req?: Request,
-  extra?: LogMeta,
-): void {
-  const payload = redact({
+export function logError(message: string, err: unknown, req?: Request, extra?: LogMeta): void {
+  logger.error({
     message,
     ...getRequestLogContext(req),
     ...extra,
     err: serializeError(err),
   });
-  logger.error(payload);
 }
 
 /**
  * Log d'avertissement avec contexte requête (ex. token expiré).
  */
 export function logWarn(message: string, req?: Request, extra?: LogMeta): void {
-  logger.warn(redact({ message, ...getRequestLogContext(req), ...extra }));
+  logger.warn({ message, ...getRequestLogContext(req), ...extra });
 }

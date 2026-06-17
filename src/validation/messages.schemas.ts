@@ -1,9 +1,18 @@
 /**
  * Schémas Zod de validation pour les messages de contact.
+ *
+ * Rôle : valider les soumissions publiques du formulaire de contact et les
+ * mises à jour de modération admin.
+ *
+ * Sync avec Front2 :
+ *   BASE partagée avec Front2/src/validation/schemas.ts — contactFormSchema,
+ *   messageUpdateFormSchema (aucun delta intentionnel).
+ *
+ * Schémas :
+ *   messageCreateSchema → POST /api/messages (formulaire de contact public)
+ *   messageUpdateSchema → PATCH /api/admin/messages/:id (modération)
  */
 import { z } from "zod";
-
-// sync with site-herve_front2/src/validation/schemas.ts
 
 /** Body POST /api/messages (formulaire contact). */
 export const messageCreateSchema = z.object({

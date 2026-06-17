@@ -8,7 +8,7 @@
  * Sécurité : redaction automatique des champs sensibles via logRedact.
  */
 import winston from "winston";
-import { redact } from "../utils/log/logRedact";
+import { redactLogField } from "../utils/log/logRedact";
 
 const { combine, timestamp, printf, colorize, errors } = winston.format;
 
@@ -38,7 +38,7 @@ const redactFormat = winston.format((info) => {
     if (key === "level") continue;
     const value = info[key as keyof typeof info];
     if (value !== undefined) {
-      (info as Record<string, unknown>)[key] = redact(value);
+      (info as Record<string, unknown>)[key] = redactLogField(key, value);
     }
   }
   return info;
@@ -63,7 +63,7 @@ const prodFormat = combine(
   redactFormat(),
   timestamp(),
   errors({ stack: true }),
-  winston.format.json(),
+  winston.format.json()
 );
 
 const logger = winston.createLogger({
