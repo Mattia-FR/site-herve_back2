@@ -88,8 +88,8 @@ const findPublished = async (limit?: number): Promise<Article[]> => {
   return rows.map((r) => mapRow(r));
 };
 
-/** Retourne les 4 derniers articles publiés pour l'aperçu de la page d'accueil. */
-const findHomepagePreview = async (): Promise<Article[]> => findPublished(4);
+/** Retourne les 3 derniers articles publiés pour l'aperçu de la page d'accueil. */
+const findHomepagePreview = async (): Promise<Article[]> => findPublished(3);
 
 /** Retourne un article publié par son ID (avec contenu HTML). */
 const findPublishedById = async (id: number): Promise<Article | null> => {
