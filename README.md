@@ -16,7 +16,7 @@ Ce dépôt couvre la **couche backend**. L'application complète nécessite auss
 - **Architecture MVC stricte** — routeurs, controllers et models **public vs admin séparés**
 - **Validation Zod 4** — body/query/params, schémas synchronisés avec Front2
 - **Gestion d'erreurs centralisée** — hiérarchie `AppError`, contrat `{ success, code, message, details? }`
-- **Observabilité** — Winston JSON en prod, `requestId` par requête, health check MySQL (`GET /api/health`)
+- **Observabilité** — Winston JSON en prod, `requestId` par requête, health check MySQL (`GET /api/health`), remontée d'erreurs frontend optionnelle (`POST /api/client-logs` si `CLIENT_LOG_ENABLED=true`)
 - **Production-ready** — fail-fast au démarrage, `trust proxy`, déploiement Nginx documenté
 - **Qualité de code** — TypeScript strict, Biome — pas de suite de tests automatisée (choix assumé, comme Front2)
 
@@ -34,12 +34,12 @@ Ce dépôt couvre la **couche backend**. L'application complète nécessite auss
 | Domaine | Capacités |
 |---------|-----------|
 | Stats | Compteurs agrégés (articles, catégories, galerie, messages, livre d'or) |
-| Articles | CRUD + upload images contenu et image à la une |
-| Images | CRUD + upload multipart + association catégories |
+| Articles | CRUD + upload images contenu et image à la une, liste paginée |
+| Images | CRUD + upload multipart + association catégories, liste paginée |
 | Catégories | CRUD avec ordre d'affichage |
-| Messages | Liste, détail, changement de statut, suppression |
-| Livre d'or | Modération (pending / approved / spam) |
-| Profil | `GET/PUT /api/admin/users/me` (bio, textes page d'accueil) |
+| Messages | Liste paginée, détail, PATCH statut, suppression |
+| Livre d'or | Modération paginée (pending / approved / spam), PATCH statut |
+| Profil | `GET/PUT /api/admin/users/me` — username, email, mot de passe, tagline, bio, hero_text, quote_text, quote_author, photo de profil |
 
 ## Architecture
 
@@ -153,9 +153,10 @@ Lors d'un message contact ou d'une entrée livre d'or, l'artiste reçoit un emai
 | Domaine | Préfixe | Auth | Exemples |
 |---------|---------|------|----------|
 | Health & static | `/`, `/uploads/*`, `/api/health` | Non | Liveness + fichiers WebP |
+| Client logs | `/api/client-logs` | Non | POST remontée d'erreurs frontend (si `CLIENT_LOG_ENABLED=true`) |
 | Auth | `/api/auth/*` | Non | login, refresh, logout |
 | Public | `/api/artist`, `/api/articles`, `/api/images`, `/api/categories`, `/api/messages`, `/api/guestbook` | Non | Lecture + POST contact/livre d'or (honeypot `website`) |
-| Admin | `/api/admin/*` | Bearer JWT | CRUD articles, images, catégories, modération, stats, profil, site settings |
+| Admin | `/api/admin/*` | Bearer JWT | CRUD articles, images, catégories, modération, stats, profil |
 
 Détail complet des endpoints dans les routeurs `src/routes/`.
 
