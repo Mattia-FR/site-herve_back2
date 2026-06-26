@@ -16,6 +16,10 @@
  *   guestbookUpdateSchema → PATCH /api/admin/guestbook/:id (modération)
  */
 import { z } from "zod";
+import { adminPaginationQuerySchema } from "./pagination.schemas";
+
+/** Statuts de modération partagés entre création admin et filtre liste. */
+const guestbookStatusEnum = z.enum(["pending", "approved", "spam"]);
 
 /** Body POST /api/guestbook. */
 export const guestbookCreateSchema = z.object({
@@ -26,5 +30,10 @@ export const guestbookCreateSchema = z.object({
 
 /** Body PATCH /api/admin/guestbook/:id (modération). */
 export const guestbookUpdateSchema = z.object({
-  status: z.enum(["pending", "approved", "spam"]),
+  status: guestbookStatusEnum,
+});
+
+/** Query GET /api/admin/guestbook — pagination + filtre statut optionnel. */
+export const guestbookAdminListQuerySchema = adminPaginationQuerySchema.extend({
+  status: guestbookStatusEnum.optional(),
 });

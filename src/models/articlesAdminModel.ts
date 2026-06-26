@@ -56,7 +56,7 @@ const findBySlugForAdmin = async (slug: string): Promise<Article | null> => {
 /**
  * Crée un article en base.
  * Le slug est généré automatiquement depuis le titre (slugify).
- * L'extrait est extrait automatiquement des 200 premiers caractères du contenu HTML.
+ * L'extrait est extrait automatiquement des 25 premiers mots du contenu HTML.
  */
 const create = async (data: ArticleCreateData): Promise<Article> => {
   const slug = buildSlug(data.title);
@@ -98,7 +98,7 @@ const update = async (id: number, data: ArticleUpdateData): Promise<Article | nu
   // Ajoute `slug` dans le payload si le titre a changé
   const payload = applySlugIfChanged({ ...updateData }, data.title, existing.title);
 
-  // Recalcule l'extrait uniquement si le contenu a réellement changé
+  // L'extrait est recalculé uniquement si le contenu change (jamais accepté depuis le client)
   if (data.content !== undefined && data.content !== existing.content) {
     payload.excerpt = createExcerpt(data.content);
   }

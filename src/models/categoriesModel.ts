@@ -69,7 +69,7 @@ export const mapRowToCategory = (row: CategoryRow): Category => ({
 /**
  * Fragment SQL commun : sélectionne les catégories avec compteur d'images
  * et image de couverture (via sous-requêtes scalaires).
- * La cover est la première image visible en galerie (display_order ASC, puis created_at DESC).
+ * La cover est l'image de galerie la plus récente de la catégorie.
  */
 const CATEGORY_SELECT = `
   SELECT
@@ -83,17 +83,17 @@ const CATEGORY_SELECT = `
     (
       SELECT i.path FROM images_categories ic JOIN images i ON i.id = ic.image_id
       WHERE ic.category_id = c.id AND i.is_in_gallery = 1
-      ORDER BY i.display_order ASC, i.created_at DESC LIMIT 1
+      ORDER BY i.created_at DESC LIMIT 1
     ) AS cover_path,
     (
       SELECT i.variants FROM images_categories ic JOIN images i ON i.id = ic.image_id
       WHERE ic.category_id = c.id AND i.is_in_gallery = 1
-      ORDER BY i.display_order ASC, i.created_at DESC LIMIT 1
+      ORDER BY i.created_at DESC LIMIT 1
     ) AS cover_variants,
     (
       SELECT i.alt_descr FROM images_categories ic JOIN images i ON i.id = ic.image_id
       WHERE ic.category_id = c.id AND i.is_in_gallery = 1
-      ORDER BY i.display_order ASC, i.created_at DESC LIMIT 1
+      ORDER BY i.created_at DESC LIMIT 1
     ) AS cover_alt_descr
   FROM categories c`;
 

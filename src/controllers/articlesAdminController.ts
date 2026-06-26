@@ -85,7 +85,7 @@ const readBySlug = asyncHandler(async (req: Request, res: Response) => {
  */
 const add = asyncHandler(async (req: Request, res: Response) => {
   const userId = getAuthUserId(req);
-  const { title, content, status, featured_image_id, excerpt } =
+  const { title, content, status, featured_image_id } =
     getValidatedBody<z.infer<typeof articleCreateSchema>>(req);
 
   // published_at est défini à la date de création si l'article est directement publié
@@ -94,7 +94,6 @@ const add = asyncHandler(async (req: Request, res: Response) => {
   const article = await articlesAdminModel.create({
     title,
     content,
-    excerpt,
     status,
     featured_image_id,
     user_id: userId,

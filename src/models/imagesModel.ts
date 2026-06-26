@@ -123,7 +123,7 @@ const findByGallery = async (categorySlug?: string): Promise<GalleryImage[]> => 
     params.push(categorySlug);
   }
 
-  sql += " GROUP BY i.id ORDER BY i.display_order ASC, i.created_at DESC";
+  sql += " GROUP BY i.id ORDER BY i.created_at DESC";
   const rows = await query<GalleryImageRow[]>(sql, params);
   return mapGalleryRows(rows);
 };
@@ -132,7 +132,7 @@ const findByGallery = async (categorySlug?: string): Promise<GalleryImage[]> => 
 const findCarouselPreview = async (limit = CAROUSEL_LIMIT): Promise<GalleryImage[]> => {
   const sql = `${GALLERY_SELECT}
     WHERE i.is_in_gallery = 1
-    GROUP BY i.id ORDER BY i.display_order ASC, i.created_at DESC
+    GROUP BY i.id ORDER BY i.created_at DESC
     LIMIT ?`;
   const rows = await query<GalleryImageRow[]>(sql, [limit]);
   return mapGalleryRows(rows);

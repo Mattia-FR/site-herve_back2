@@ -6,6 +6,7 @@
  * Note : résout la dépendance circulaire articles ↔ featured_image_id en deux passes.
  */
 import type { Connection } from "mysql2/promise";
+import { createExcerpt } from "./src/utils/string/excerpt";
 
 export async function runSeeds(connection: Connection): Promise<void> {
   // ============================================
@@ -33,14 +34,75 @@ export async function runSeeds(connection: Connection): Promise<void> {
   // ARTICLES - étape 1 : sans featured_image_id
   // (dépendance circulaire avec images, résolue après)
   // ============================================
-  await connection.query(`
-    INSERT INTO articles (title, slug, excerpt, content, status, user_id, featured_image_id, published_at) VALUES
-    ("Bienvenue sur le site", "bienvenue-sur-le-site", "Présentation du site et des objectifs.", "Bienvenue sur ce site. Vous y trouverez des articles, une galerie et un espace d'échange. N'hésitez pas à parcourir les différentes sections et à me contacter pour toute question.", "published", 1, NULL, "2024-01-15 10:00:00"),
-    ("Mon processus de création", "mon-processus-creation", "Chaque réalisation a son histoire. Je partage ici mon processus de création étape par étape : l'inspiration, les croquis, la composition et le rendu final. Découvrez comment une idée prend forme, des premières esquisses aux touches de finition, en passant par les choix de couleur, de matière et de lumière qui structurent chaque tableau.", "Chaque réalisation a son histoire. Je partage ici mon processus de création étape par étape : l'inspiration, les croquis, la composition et le rendu final. Découvrez comment une idée prend forme.", "published", 2, NULL, "2024-02-10 14:30:00"),
-    ("Techniques et matériaux", "techniques-materiaux", "Cet article présente les techniques et matériaux que j'utilise au quotidien. Nous verrons ensemble les bases pour bien démarrer et progresser dans sa pratique artistique.", "Cet article présente les techniques et matériaux que j'utilise au quotidien. Nous verrons les bases pour bien démarrer et progresser dans sa pratique.", "published", 1, NULL, "2024-03-05 09:15:00"),
-    ("Projet en cours", "projet-en-cours", "Travaux en cours.", "Voici un aperçu de mes projets actuels. Certains sont encore en phase d'étude, d'autres en cours de finalisation.", "published", 2, NULL, "2024-03-20 11:00:00"),
-    ("Article à venir", "article-a-venir", "Brouillon d'un prochain article.", "Contenu en préparation. Cet article sera publié prochainement.", "draft", 1, NULL, NULL)
-  `);
+  const seedArticles: {
+    title: string;
+    slug: string;
+    content: string;
+    status: "draft" | "published";
+    user_id: number;
+    published_at: string | null;
+  }[] = [
+    {
+      title: "Bienvenue sur le site",
+      slug: "bienvenue-sur-le-site",
+      content:
+        "Bienvenue sur ce site. Vous y trouverez des articles, une galerie et un espace d'échange. N'hésitez pas à parcourir les différentes sections et à me contacter pour toute question.",
+      status: "published",
+      user_id: 1,
+      published_at: "2024-01-15 10:00:00",
+    },
+    {
+      title: "Mon processus de création",
+      slug: "mon-processus-creation",
+      content:
+        "Chaque réalisation a son histoire. Je partage ici mon processus de création étape par étape : l'inspiration, les croquis, la composition et le rendu final. Découvrez comment une idée prend forme.",
+      status: "published",
+      user_id: 2,
+      published_at: "2024-02-10 14:30:00",
+    },
+    {
+      title: "Techniques et matériaux",
+      slug: "techniques-materiaux",
+      content:
+        "Cet article présente les techniques et matériaux que j'utilise au quotidien. Nous verrons les bases pour bien démarrer et progresser dans sa pratique.",
+      status: "published",
+      user_id: 1,
+      published_at: "2024-03-05 09:15:00",
+    },
+    {
+      title: "Projet en cours",
+      slug: "projet-en-cours",
+      content:
+        "Voici un aperçu de mes projets actuels. Certains sont encore en phase d'étude, d'autres en cours de finalisation.",
+      status: "published",
+      user_id: 2,
+      published_at: "2024-03-20 11:00:00",
+    },
+    {
+      title: "Article à venir",
+      slug: "article-a-venir",
+      content: "Contenu en préparation. Cet article sera publié prochainement.",
+      status: "draft",
+      user_id: 1,
+      published_at: null,
+    },
+  ];
+
+  for (const article of seedArticles) {
+    await connection.query(
+      `INSERT INTO articles (title, slug, excerpt, content, status, user_id, featured_image_id, published_at)
+       VALUES (?, ?, ?, ?, ?, ?, NULL, ?)`,
+      [
+        article.title,
+        article.slug,
+        createExcerpt(article.content),
+        article.content,
+        article.status,
+        article.user_id,
+        article.published_at,
+      ],
+    );
+  }
 
   // ============================================
   // IMAGES (toutes les images de uploads/gallery)

@@ -8,7 +8,7 @@
  * Table principale : guestbook_entries
  */
 import type { ResultSetHeader } from "mysql2";
-import type { GuestbookEntry, GuestbookUpdateData } from "../types/guestbook";
+import type { GuestbookEntry, GuestbookStatus, GuestbookUpdateData } from "../types/guestbook";
 import type { PaginatedResponse } from "../types/pagination";
 import { paginateQuery } from "../utils/db/paginate";
 import pool from "./db";
@@ -19,14 +19,19 @@ import {
   mapRowToEntry,
 } from "./guestbookModel";
 
-/** Retourne toutes les entrées paginées triées par date de création décroissante. */
+/** Retourne les entrées paginées triées par date de création décroissante. */
 const findPaginated = async (
   page: number,
-  limit: number
+  limit: number,
+  status?: GuestbookStatus
 ): Promise<PaginatedResponse<GuestbookEntry>> => {
+  const whereClause = status ? " WHERE status = ?" : "";
+  const params = status ? [status] : [];
+
   return paginateQuery<GuestbookEntryRow, GuestbookEntry>({
-    selectSql: `${GUESTBOOK_SELECT} ORDER BY created_at DESC`,
-    countSql: "SELECT COUNT(*) AS total FROM guestbook_entries",
+    selectSql: `${GUESTBOOK_SELECT}${whereClause} ORDER BY created_at DESC`,
+    countSql: `SELECT COUNT(*) AS total FROM guestbook_entries${whereClause}`,
+    params,
     page,
     limit,
     mapRow: mapRowToEntry,

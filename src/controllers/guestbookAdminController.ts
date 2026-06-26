@@ -18,13 +18,16 @@ import { NotFoundError } from "../errors/AppError";
 import guestbookAdminModel from "../models/guestbookAdminModel";
 import { asyncHandler } from "../utils/asyncHandler";
 import { getValidatedBody, getValidatedId, getValidatedQuery } from "../utils/http/requestHelpers";
-import type { guestbookUpdateSchema } from "../validation/guestbook.schemas";
-import type { adminPaginationQuerySchema } from "../validation/pagination.schemas";
+import type {
+  guestbookAdminListQuerySchema,
+  guestbookUpdateSchema,
+} from "../validation/guestbook.schemas";
 
 /** GET /api/admin/guestbook — liste paginée de toutes les entrées. */
 const browseAll = asyncHandler(async (req: Request, res: Response) => {
-  const { page, limit } = getValidatedQuery<z.infer<typeof adminPaginationQuerySchema>>(req);
-  const result = await guestbookAdminModel.findPaginated(page, limit);
+  const { page, limit, status } =
+    getValidatedQuery<z.infer<typeof guestbookAdminListQuerySchema>>(req);
+  const result = await guestbookAdminModel.findPaginated(page, limit, status);
   res.status(200).json(result);
 });
 

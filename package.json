@@ -8,6 +8,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "init:db": "ts-node init.ts",
+    "recalculate:excerpts": "ts-node scripts/recalculate-excerpts.ts",
     "check": "biome check .",
     "format": "biome format --write .",
     "lint": "biome check --write ."

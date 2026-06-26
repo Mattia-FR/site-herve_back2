@@ -5,7 +5,7 @@
  *
  * Routes correspondantes (voir messagesAdminRouter.ts, préfixe /api/admin/messages) :
  *   GET    /     → liste paginée de tous les messages (unread/read/spam)
- *   GET    /:id  → détail d'un message
+ *   GET    /:id  → détail d'un message (marque unread → read à l'ouverture)
  *   PATCH  /:id  → modifier le statut (ex: unread → read, read → spam)
  *   DELETE /:id  → supprimer définitivement un message
  */
@@ -16,19 +16,22 @@ import { NotFoundError } from "../errors/AppError";
 import messagesAdminModel from "../models/messagesAdminModel";
 import { asyncHandler } from "../utils/asyncHandler";
 import { getValidatedBody, getValidatedId, getValidatedQuery } from "../utils/http/requestHelpers";
-import type { messageUpdateSchema } from "../validation/messages.schemas";
-import type { adminPaginationQuerySchema } from "../validation/pagination.schemas";
+import type {
+  messageUpdateSchema,
+  messagesAdminListQuerySchema,
+} from "../validation/messages.schemas";
 
 /** GET /api/admin/messages — liste paginée de tous les messages. */
 const browse = asyncHandler(async (req: Request, res: Response) => {
-  const { page, limit } = getValidatedQuery<z.infer<typeof adminPaginationQuerySchema>>(req);
-  const result = await messagesAdminModel.findPaginated(page, limit);
+  const { page, limit, status } =
+    getValidatedQuery<z.infer<typeof messagesAdminListQuerySchema>>(req);
+  const result = await messagesAdminModel.findPaginated(page, limit, status);
   res.status(200).json(result);
 });
 
-/** GET /api/admin/messages/:id — retourne un message par son ID. */
+/** GET /api/admin/messages/:id — retourne un message et le marque lu si non lu. */
 const read = asyncHandler(async (req: Request, res: Response) => {
-  const message = await messagesAdminModel.findById(getValidatedId(req));
+  const message = await messagesAdminModel.findByIdAndMarkRead(getValidatedId(req));
   if (!message) throw new NotFoundError(NotFoundResource.MESSAGE);
   res.status(200).json(message);
 });

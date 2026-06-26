@@ -4,7 +4,7 @@
  * Rôle : CRUD des images de la galerie avec pipeline de traitement Sharp.
  *
  * Routes correspondantes (voir imagesAdminRouter.ts, préfixe /api/admin/images) :
- *   GET    /                  → liste paginée de toutes les images
+ *   GET    /                  → liste paginée des images de galerie
  *   GET    /:id               → détail d'une image + ses catégories
  *   POST   /                  → ajouter une image (upload + traitement Sharp)
  *   PUT    /:id/categories    → remplacer les catégories d'une image
@@ -37,7 +37,7 @@ import type {
 } from "../validation/images.schemas";
 import type { adminPaginationQuerySchema } from "../validation/pagination.schemas";
 
-/** GET /api/admin/images — liste paginée de toutes les images. */
+/** GET /api/admin/images — liste paginée des images de galerie. */
 const browse = asyncHandler(async (req: Request, res: Response) => {
   const { page, limit } = getValidatedQuery<z.infer<typeof adminPaginationQuerySchema>>(req);
   const result = await imagesAdminModel.findPaginated(page, limit);
@@ -61,7 +61,7 @@ const add = asyncHandler(async (req: Request, res: Response) => {
     title: meta.title ?? null,
     description: meta.description ?? null,
     alt_descr: meta.alt_descr ?? null,
-    is_in_gallery: meta.is_in_gallery ?? false,
+    is_in_gallery: true,
     display_order: meta.display_order ?? 0,
     article_id: meta.article_id ?? null,
     path: `/uploads/gallery/${file.filename}`,
@@ -86,10 +86,11 @@ const read = asyncHandler(async (req: Request, res: Response) => {
 
 /** PUT /api/admin/images/:id — met à jour les métadonnées de l'image. */
 const edit = asyncHandler(async (req: Request, res: Response) => {
-  const image = await imagesAdminModel.update(
-    getValidatedId(req),
-    getValidatedBody<z.infer<typeof imageUpdateSchema>>(req)
-  );
+  const body = getValidatedBody<z.infer<typeof imageUpdateSchema>>(req);
+  const image = await imagesAdminModel.update(getValidatedId(req), {
+    ...body,
+    is_in_gallery: true,
+  });
   if (!image) throw new NotFoundError(NotFoundResource.IMAGE);
   res.status(200).json(image);
 });

@@ -39,7 +39,6 @@ export interface Article {
 export interface ArticleCreateData {
   title: string;
   content: string;
-  excerpt?: string | null;
   status?: ArticleStatus;
   user_id: number;
   featured_image_id?: number | null;
@@ -49,7 +48,6 @@ export interface ArticleCreateData {
 /** Données partielles pour mettre à jour un article. */
 export interface ArticleUpdateData {
   title?: string;
-  excerpt?: string | null;
   content?: string;
   status?: ArticleStatus;
   featured_image_id?: number | null;

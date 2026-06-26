@@ -28,7 +28,7 @@ const browseGallery = asyncHandler(async (req: Request, res: Response) => {
 /**
  * GET /api/images/gallery/carousel
  * Retourne un sous-ensemble d'images pour le carrousel de la page d'accueil.
- * Aucun filtre — les images sont sélectionnées selon display_order.
+ * Aucun filtre — les images les plus récentes sont sélectionnées pour le carrousel.
  */
 const readCarouselPreview = asyncHandler(async (_req: Request, res: Response) => {
   const images = await imagesModel.findCarouselPreview();

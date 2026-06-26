@@ -47,14 +47,14 @@ async function unlinkSilent(relativePath: string): Promise<void> {
   }
 }
 
-/** Retourne la liste paginée de toutes les images (triées par date de création). */
+/** Retourne la liste paginée des images de galerie (triées par date de création). */
 const findPaginated = async (
   page: number,
   limit: number
 ): Promise<PaginatedResponse<ImageWithUrl>> => {
   return paginateQuery<ImageRow, ImageWithUrl>({
-    selectSql: `${IMAGE_BASE_SELECT} ORDER BY created_at DESC`,
-    countSql: "SELECT COUNT(*) AS total FROM images",
+    selectSql: `${IMAGE_BASE_SELECT} WHERE is_in_gallery = 1 ORDER BY created_at DESC`,
+    countSql: "SELECT COUNT(*) AS total FROM images WHERE is_in_gallery = 1",
     page,
     limit,
     mapRow: (r) => mapToImageWithUrl(mapRowToImage(r)),

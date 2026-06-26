@@ -7,17 +7,34 @@
  * Table principale : contact_messages
  */
 import type { ResultSetHeader } from "mysql2";
-import type { Message, MessageUpdateData } from "../types/messages";
+import type { Message, MessageStatus, MessageUpdateData } from "../types/messages";
 import type { PaginatedResponse } from "../types/pagination";
 import { paginateQuery } from "../utils/db/paginate";
 import pool from "./db";
 import { MESSAGE_SELECT, type MessageRow, findById, mapRowToMessage } from "./messagesModel";
 
+type MessageListStatusFilter = MessageStatus | "received";
+
 /** Retourne les messages paginés triés par date de création décroissante. */
-const findPaginated = async (page: number, limit: number): Promise<PaginatedResponse<Message>> => {
+const findPaginated = async (
+  page: number,
+  limit: number,
+  status?: MessageListStatusFilter
+): Promise<PaginatedResponse<Message>> => {
+  let whereClause = "";
+  let params: string[] = [];
+
+  if (status === "received") {
+    whereClause = " WHERE status IN ('unread', 'read')";
+  } else if (status) {
+    whereClause = " WHERE status = ?";
+    params = [status];
+  }
+
   return paginateQuery<MessageRow, Message>({
-    selectSql: `${MESSAGE_SELECT} ORDER BY created_at DESC`,
-    countSql: "SELECT COUNT(*) AS total FROM contact_messages",
+    selectSql: `${MESSAGE_SELECT}${whereClause} ORDER BY created_at DESC`,
+    countSql: `SELECT COUNT(*) AS total FROM contact_messages${whereClause}`,
+    params,
     page,
     limit,
     mapRow: mapRowToMessage,
@@ -25,7 +42,19 @@ const findPaginated = async (page: number, limit: number): Promise<PaginatedResp
 };
 
 /**
- * Met à jour le statut d'un message (unread / read / spam).
+ * Retourne un message par ID et le marque lu s'il était non lu.
+ * Idempotent : archived / spam / read inchangés.
+ */
+const findByIdAndMarkRead = async (id: number): Promise<Message | null> => {
+  await pool.query<ResultSetHeader>(
+    "UPDATE contact_messages SET status = 'read' WHERE id = ? AND status = 'unread'",
+    [id]
+  );
+  return findById(id);
+};
+
+/**
+ * Met à jour le statut d'un message (unread / read / archived / spam).
  * Retourne null si le message n'existe pas.
  */
 const update = async (id: number, data: MessageUpdateData): Promise<Message | null> => {
@@ -51,4 +80,4 @@ const deleteById = async (id: number): Promise<boolean> => {
   return result.affectedRows > 0;
 };
 
-export default { findPaginated, findById, update, deleteById };
+export default { findPaginated, findById, findByIdAndMarkRead, update, deleteById };

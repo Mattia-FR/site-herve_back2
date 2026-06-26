@@ -13,6 +13,10 @@
  *   messageUpdateSchema → PATCH /api/admin/messages/:id (modération)
  */
 import { z } from "zod";
+import { adminPaginationQuerySchema } from "./pagination.schemas";
+
+/** Statuts de modération partagés entre mise à jour admin et filtre liste. */
+const messageStatusEnum = z.enum(["unread", "read", "archived", "spam"]);
 
 /** Body POST /api/messages (formulaire contact). */
 export const messageCreateSchema = z.object({
@@ -25,5 +29,13 @@ export const messageCreateSchema = z.object({
 
 /** Body PATCH /api/admin/messages/:id (modération). */
 export const messageUpdateSchema = z.object({
-  status: z.enum(["unread", "read", "archived", "spam"]),
+  status: messageStatusEnum,
+});
+
+/** Filtre liste admin — inclut "received" (unread + read). */
+const messageListStatusFilterEnum = messageStatusEnum.or(z.literal("received"));
+
+/** Query GET /api/admin/messages — pagination + filtre statut optionnel. */
+export const messagesAdminListQuerySchema = adminPaginationQuerySchema.extend({
+  status: messageListStatusFilterEnum.optional(),
 });
