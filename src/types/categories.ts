@@ -1,20 +1,20 @@
 /**
- * Types TypeScript — Catégories d'images.
+ * Types TypeScript — Catégories d'images (= Galeries).
  *
  * Rôle : définir le contrat des catégories utilisées pour organiser
  * la galerie d'images.
  *
- * CategoryCoverImage : première image de la catégorie (affichée comme couverture)
- * Category           : catégorie complète avec compteur et couverture
+ * CategoryCoverImage : image de couverture (manuelle via cover_image_id ou
+ *                      première image par display_order)
+ * Category           : catégorie complète avec compteur, couverture et cover_image_id
  * CategoryCreateData : données pour créer une catégorie
  * CategoryUpdateData : données partielles pour mettre à jour une catégorie
  */
 import type { ImageVariantUrls } from "./images";
 
-/** Image de couverture d'une catégorie (première image de la galerie dans cette catégorie). */
+/** Image de couverture d'une catégorie. */
 export interface CategoryCoverImage {
   imageUrl: string;
-  alt_descr: string | null;
   variantUrls?: ImageVariantUrls;
 }
 
@@ -24,6 +24,7 @@ export interface Category {
   name: string;
   slug: string;
   display_order: number; // ordre d'affichage dans la navigation
+  cover_image_id: number | null; // ID de l'image de couverture choisie manuellement
   created_at: string;
   image_count: number; // nombre d'images en galerie (is_in_gallery = true)
   cover_image: CategoryCoverImage | null; // null si aucune image en galerie
@@ -40,4 +41,5 @@ export interface CategoryUpdateData {
   name?: string;
   display_order?: number;
   slug?: string; // géré automatiquement par applySlugIfChanged
+  cover_image_id?: number | null;
 }

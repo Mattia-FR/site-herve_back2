@@ -28,7 +28,6 @@ interface ArtistProfileRow extends RowDataPacket {
   quote_text: string | null;
   quote_author: string | null;
   image_path: string | null;
-  image_alt_descr: string | null;
   image_variants: string | ImageVariants | null;
 }
 
@@ -40,7 +39,7 @@ const findProfile = async (): Promise<ArtistProfile | null> => {
   const rows = await query<ArtistProfileRow[]>(
     `SELECT u.username, u.first_name, u.last_name, u.tagline, u.bio,
             u.hero_text, u.quote_text, u.quote_author,
-            i.path AS image_path, i.alt_descr AS image_alt_descr, i.variants AS image_variants
+            i.path AS image_path, i.variants AS image_variants
      FROM users u
      LEFT JOIN images i ON u.profile_image_id = i.id
      WHERE u.id = ?`,
@@ -57,7 +56,6 @@ const findProfile = async (): Promise<ArtistProfile | null> => {
     if (imageUrl) {
       profileImage = {
         imageUrl,
-        alt: row.image_alt_descr ?? null,
         variantUrls: buildVariantUrls(row.image_variants),
       };
     }

@@ -31,7 +31,6 @@ export interface Article {
   published_at: string | null;
   featured_image_id: number | null;
   imageUrl?: string; // URL absolue de l'image à la une (construite depuis path)
-  imageAlt?: string | null;
   imageVariantUrls?: ImageVariantUrls; // URLs des variantes WebP (thumb/md/lg)
 }
 

@@ -5,20 +5,22 @@
  *
  * Routes correspondantes (voir imagesAdminRouter.ts, préfixe /api/admin/images) :
  *   GET    /                  → liste paginée des images de galerie
- *   GET    /:id               → détail d'une image + ses catégories
- *   POST   /                  → ajouter une image (upload + traitement Sharp)
- *   PUT    /:id/categories    → remplacer les catégories d'une image
- *   PUT    /:id               → modifier les métadonnées d'une image
+ *   GET    /:id               → détail d'une image
+ *   POST   /                  → ajouter une image (upload atomique avec category_id)
+ *   PUT    /:id               → modifier les métadonnées + catégorie d'une image
+ *   PUT    /:id/file          → remplacer le fichier physique d'une image
  *   DELETE /:id               → supprimer image (fichiers disque + DB)
  *
  * Pipeline d'upload (POST /) :
  *   Multer (écriture disque) → validateMagicBytes → validateBody → add()
  *   → processUploadedImage (Sharp : 3 variantes WebP) → imagesAdminModel.create
+ *   L'association catégorie est atomique : category_id inclus dans l'INSERT.
  */
+import fs from "node:fs/promises";
 import type { Request, Response } from "express";
 import type { z } from "zod";
 import { NotFoundResource } from "../config/errorCodes";
-import { UPLOADS_GALLERY_VARIANTS_DIR } from "../config/uploadsPaths";
+import { UPLOADS_GALLERY_VARIANTS_DIR, resolveUploadPath } from "../config/uploadsPaths";
 import { NotFoundError } from "../errors/AppError";
 import imagesAdminModel from "../models/imagesAdminModel";
 import { asyncHandler } from "../utils/asyncHandler";
@@ -29,12 +31,9 @@ import {
   getValidatedId,
   getValidatedQuery,
 } from "../utils/http/requestHelpers";
+import { cleanupUploadedFile } from "../utils/image/cleanupUploadedFile";
 import { processUploadedImage } from "../utils/image/processUploadedImage";
-import type {
-  imageCategoriesSchema,
-  imageMetadataSchema,
-  imageUpdateSchema,
-} from "../validation/images.schemas";
+import type { imageMetadataSchema, imageUpdateSchema } from "../validation/images.schemas";
 import type { adminPaginationQuerySchema } from "../validation/pagination.schemas";
 
 /** GET /api/admin/images — liste paginée des images de galerie. */
@@ -46,24 +45,22 @@ const browse = asyncHandler(async (req: Request, res: Response) => {
 
 /**
  * POST /api/admin/images
- * Traite l'image avec Sharp (3 variantes WebP), puis crée l'entrée en base.
- * Le chemin stocké en base est le chemin public (/uploads/gallery/...).
+ * Upload atomique : génère les variantes WebP puis crée l'image avec sa catégorie en un seul INSERT.
  */
 const add = asyncHandler(async (req: Request, res: Response) => {
   const file = getUploadedFile(req);
   const userId = getAuthUserId(req);
   const meta = getValidatedBody<z.infer<typeof imageMetadataSchema>>(req);
 
-  // Génère les variantes WebP (thumb/md/lg) dans UPLOADS_GALLERY_VARIANTS_DIR
   const variants = await processUploadedImage(file.path, UPLOADS_GALLERY_VARIANTS_DIR);
 
   const image = await imagesAdminModel.create({
     title: meta.title ?? null,
     description: meta.description ?? null,
-    alt_descr: meta.alt_descr ?? null,
     is_in_gallery: true,
     display_order: meta.display_order ?? 0,
     article_id: meta.article_id ?? null,
+    category_id: meta.category_id ?? null,
     path: `/uploads/gallery/${file.filename}`,
     variants,
     user_id: userId,
@@ -71,20 +68,15 @@ const add = asyncHandler(async (req: Request, res: Response) => {
   res.status(201).json(image);
 });
 
-/**
- * GET /api/admin/images/:id
- * Retourne une image avec ses catégories associées (liste d'IDs).
- */
+/** GET /api/admin/images/:id — retourne une image. */
 const read = asyncHandler(async (req: Request, res: Response) => {
   const id = getValidatedId(req);
   const image = await imagesAdminModel.findById(id);
   if (!image) throw new NotFoundError(NotFoundResource.IMAGE);
-  // Les catégories sont chargées séparément (table de jointure images_categories)
-  const categoryIds = await imagesAdminModel.findCategoriesByImageId(id);
-  res.status(200).json({ ...image, categoryIds });
+  res.status(200).json(image);
 });
 
-/** PUT /api/admin/images/:id — met à jour les métadonnées de l'image. */
+/** PUT /api/admin/images/:id — met à jour les métadonnées et/ou la catégorie de l'image. */
 const edit = asyncHandler(async (req: Request, res: Response) => {
   const body = getValidatedBody<z.infer<typeof imageUpdateSchema>>(req);
   const image = await imagesAdminModel.update(getValidatedId(req), {
@@ -96,25 +88,52 @@ const edit = asyncHandler(async (req: Request, res: Response) => {
 });
 
 /**
- * PUT /api/admin/images/:id/categories
- * Remplace complètement les catégories de l'image (DELETE + INSERT).
- * Retourne l'image mise à jour avec ses nouvelles catégories.
+ * PUT /api/admin/images/:id/file
+ * Remplace le fichier physique d'une image existante :
+ *   1. Traite le nouveau fichier avec Sharp (3 variantes WebP)
+ *   2. Supprime les anciens fichiers (original + variantes)
+ *   3. Met à jour path et variants en base
  */
-const setCategories = asyncHandler(async (req: Request, res: Response) => {
+const replaceFile = asyncHandler(async (req: Request, res: Response) => {
   const id = getValidatedId(req);
-  const { categoryIds } = getValidatedBody<z.infer<typeof imageCategoriesSchema>>(req);
+  const file = getUploadedFile(req);
 
-  await imagesAdminModel.setCategories(id, categoryIds);
+  const existing = await imagesAdminModel.findById(id);
+  if (!existing) {
+    await cleanupUploadedFile(file.path);
+    throw new NotFoundError(NotFoundResource.IMAGE);
+  }
 
-  const image = await imagesAdminModel.findById(id);
-  if (!image) throw new NotFoundError(NotFoundResource.IMAGE);
-  res.status(200).json(image);
+  const variants = await processUploadedImage(file.path, UPLOADS_GALLERY_VARIANTS_DIR);
+
+  // Supprimer les anciens fichiers après succès du traitement Sharp
+  const unlinkSilent = async (p: string) => {
+    try {
+      await fs.unlink(resolveUploadPath(p));
+    } catch {
+      /* ignore */
+    }
+  };
+  await unlinkSilent(existing.path);
+  if (existing.variants) {
+    await Promise.all([
+      unlinkSilent(existing.variants.thumb),
+      unlinkSilent(existing.variants.md),
+      unlinkSilent(existing.variants.lg),
+    ]);
+  }
+
+  const updated = await imagesAdminModel.update(id, {
+    path: `/uploads/gallery/${file.filename}`,
+    variants,
+  });
+  if (!updated) throw new NotFoundError(NotFoundResource.IMAGE);
+  res.status(200).json(updated);
 });
 
 /**
  * DELETE /api/admin/images/:id
- * Supprime l'image de la base de données ET les fichiers physiques
- * (original + variantes WebP). Retourne 204 si supprimé, 404 si introuvable.
+ * Supprime l'image de la base de données ET les fichiers physiques.
  */
 const destroy = asyncHandler(async (req: Request, res: Response) => {
   const deleted = await imagesAdminModel.deleteById(getValidatedId(req));
@@ -122,4 +141,4 @@ const destroy = asyncHandler(async (req: Request, res: Response) => {
   res.sendStatus(204);
 });
 
-export { add, browse, destroy, edit, read, setCategories };
+export { add, browse, destroy, edit, read, replaceFile };

@@ -8,14 +8,16 @@
  * position donnée avec décalage des voisins ; mise à jour avec algorithme de
  * décalage (transactions MySQL).
  *
- * Note : la suppression d'une catégorie échouera si des images y sont encore
- * associées (contrainte FK ER_NO_REFERENCED_ROW_2 → interceptée dans errorHandler.ts).
+ * Note : la suppression d'une catégorie est bloquée si des images lui sont
+ * encore assignées (check applicatif → 400 INVALID_REFERENCE).
+ * Avec cover_image_id ON DELETE SET NULL, la FK est nettoyée automatiquement
+ * si l'image de couverture est supprimée.
  *
  * Table principale : categories
  */
 import type { PoolConnection, ResultSetHeader, RowDataPacket } from "mysql2/promise";
-import { NotFoundResource } from "../config/errorCodes";
-import { NotFoundError } from "../errors/AppError";
+import { DEFAULT_ERROR_MESSAGES, ErrorCode, NotFoundResource } from "../config/errorCodes";
+import { BadRequestError, NotFoundError } from "../errors/AppError";
 import type { Category, CategoryCreateData, CategoryUpdateData } from "../types/categories";
 import { buildUpdateQuery } from "../utils/db/buildUpdateQuery";
 import { applySlugIfChanged, buildSlug } from "../utils/string/slug";
@@ -23,6 +25,7 @@ import publicCategoriesModel, { findById } from "./categoriesModel";
 import pool from "./db";
 
 type MaxOrderRow = RowDataPacket & { max_order: number };
+type CountRow = RowDataPacket & { cnt: number };
 
 /** Calcule la prochaine position en fin de liste. */
 const getNextDisplayOrder = async (conn: PoolConnection): Promise<number> => {
@@ -154,14 +157,44 @@ const update = async (id: number, data: CategoryUpdateData): Promise<Category | 
 
 /**
  * Supprime une catégorie par son ID.
+ * Refusé si des images lui sont encore assignées (évite les images orphelines).
  * @returns true si supprimée, false si introuvable
  */
 const deleteById = async (id: number): Promise<boolean> => {
+  const [countRows] = await pool.query<CountRow[]>(
+    "SELECT COUNT(*) AS cnt FROM images WHERE category_id = ? AND is_in_gallery = 1",
+    [id]
+  );
+  const count = Number(countRows[0]?.cnt ?? 0);
+
+  if (count > 0) {
+    throw new BadRequestError(
+      DEFAULT_ERROR_MESSAGES[ErrorCode.INVALID_REFERENCE],
+      ErrorCode.INVALID_REFERENCE
+    );
+  }
+
   const [result] = await pool.query<ResultSetHeader>("DELETE FROM categories WHERE id = ?", [id]);
   return result.affectedRows > 0;
+};
+
+/**
+ * Définit ou retire l'image de couverture d'une catégorie.
+ * imageId = null → remet la couverture automatique (première image par display_order).
+ */
+const setCover = async (categoryId: number, imageId: number | null): Promise<Category | null> => {
+  const cat = await findById(categoryId);
+  if (!cat) return null;
+
+  await pool.query<ResultSetHeader>("UPDATE categories SET cover_image_id = ? WHERE id = ?", [
+    imageId,
+    categoryId,
+  ]);
+
+  return findById(categoryId);
 };
 
 /** Délègue à publicCategoriesModel.findAll (même requête pour admin et public). */
 const findAll = async (): Promise<Category[]> => publicCategoriesModel.findAll();
 
-export default { findAll, create, update, deleteById };
+export default { findAll, findById, create, update, deleteById, setCover };

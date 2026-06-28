@@ -13,7 +13,6 @@ import type { ImageVariantUrls } from "./images";
 /** Photo de profil de l'artiste avec URL absolue. */
 export interface ArtistProfileImage {
   imageUrl: string;
-  alt: string | null;
   variantUrls?: ImageVariantUrls; // variantes WebP pour le responsive
 }
 

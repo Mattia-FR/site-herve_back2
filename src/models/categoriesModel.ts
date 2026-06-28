@@ -1,17 +1,17 @@
 /**
- * Model public — catégories.
+ * Model public — catégories (= galeries).
  *
  * Rôle : lire les catégories avec leur compteur d'images en galerie et leur image
- * de couverture (première image de la catégorie selon display_order).
+ * de couverture.
+ *
+ * Couverture : cover_image_id si défini manuellement, sinon première image de la
+ * catégorie selon display_order ASC.
  *
  * Exporte également mapRowToCategory et findById pour réutilisation dans
  * categoriesAdminModel.ts.
  *
- * Technique : Les compteurs et la cover sont calculés via des sous-requêtes SQL
- * scalaires plutôt que des jointures pour éviter la multiplication des lignes
- * (une seule ligne par catégorie dans le résultat).
- *
  * Table principale : categories
+ * Jointure : images (via categories.cover_image_id ou sous-requête display_order)
  */
 import type { RowDataPacket } from "mysql2";
 import type { Category, CategoryCoverImage } from "../types/categories";
@@ -25,11 +25,11 @@ export interface CategoryRow extends RowDataPacket {
   name: string;
   slug: string;
   display_order: number;
+  cover_image_id: number | null;
   created_at: Date | string;
-  image_count: number; // nombre d'images en galerie pour cette catégorie
-  cover_path: string | null; // chemin de la première image (cover)
+  image_count: number;
+  cover_path: string | null;
   cover_variants: string | null;
-  cover_alt_descr: string | null;
 }
 
 /**
@@ -39,14 +39,13 @@ export interface CategoryRow extends RowDataPacket {
 const mapCoverImage = (
   path: string | null,
   variantsRaw: string | null,
-  altDescr: string | null
 ): CategoryCoverImage | null => {
   if (!path) return null;
   const imageUrl = buildImageUrl(path);
   if (!imageUrl) return null;
 
   const variantUrls = buildVariantUrls(variantsRaw);
-  const cover: CategoryCoverImage = { imageUrl, alt_descr: altDescr ?? null };
+  const cover: CategoryCoverImage = { imageUrl };
 
   if (variantUrls) {
     cover.variantUrls = variantUrls;
@@ -61,41 +60,40 @@ export const mapRowToCategory = (row: CategoryRow): Category => ({
   name: row.name,
   slug: row.slug,
   display_order: row.display_order ?? 0,
+  cover_image_id: row.cover_image_id ?? null,
   created_at: toDateString(row.created_at) ?? "",
   image_count: Number(row.image_count) || 0,
-  cover_image: mapCoverImage(row.cover_path, row.cover_variants, row.cover_alt_descr),
+  cover_image: mapCoverImage(row.cover_path, row.cover_variants),
 });
 
 /**
  * Fragment SQL commun : sélectionne les catégories avec compteur d'images
- * et image de couverture (via sous-requêtes scalaires).
- * La cover est l'image de galerie la plus récente de la catégorie.
+ * et image de couverture.
+ *
+ * Couverture : JOIN sur cover_image_id si défini, sinon sur la première image
+ * de la catégorie (display_order ASC, id ASC).
+ * Le COALESCE(c.cover_image_id, sous-requête) résout l'ID de la cover dans un seul JOIN.
  */
 const CATEGORY_SELECT = `
   SELECT
-    c.id, c.name, c.slug, c.display_order, c.created_at,
+    c.id, c.name, c.slug, c.display_order, c.cover_image_id, c.created_at,
     (
       SELECT COUNT(*)
-      FROM images_categories ic
-      JOIN images i ON i.id = ic.image_id
-      WHERE ic.category_id = c.id AND i.is_in_gallery = 1
+      FROM images i
+      WHERE i.category_id = c.id AND i.is_in_gallery = 1
     ) AS image_count,
+    cover.path       AS cover_path,
+    cover.variants   AS cover_variants
+  FROM categories c
+  LEFT JOIN images cover ON cover.id = COALESCE(
+    c.cover_image_id,
     (
-      SELECT i.path FROM images_categories ic JOIN images i ON i.id = ic.image_id
-      WHERE ic.category_id = c.id AND i.is_in_gallery = 1
-      ORDER BY i.created_at DESC LIMIT 1
-    ) AS cover_path,
-    (
-      SELECT i.variants FROM images_categories ic JOIN images i ON i.id = ic.image_id
-      WHERE ic.category_id = c.id AND i.is_in_gallery = 1
-      ORDER BY i.created_at DESC LIMIT 1
-    ) AS cover_variants,
-    (
-      SELECT i.alt_descr FROM images_categories ic JOIN images i ON i.id = ic.image_id
-      WHERE ic.category_id = c.id AND i.is_in_gallery = 1
-      ORDER BY i.created_at DESC LIMIT 1
-    ) AS cover_alt_descr
-  FROM categories c`;
+      SELECT id FROM images
+      WHERE category_id = c.id AND is_in_gallery = 1
+      ORDER BY display_order ASC, id ASC
+      LIMIT 1
+    )
+  )`;
 
 /** Retourne une catégorie par son ID. Exportée pour categoriesAdminModel. */
 export const findById = async (id: number): Promise<Category | null> => {

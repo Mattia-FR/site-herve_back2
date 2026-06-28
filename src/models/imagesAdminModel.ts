@@ -1,21 +1,19 @@
 /**
- * Model admin — images (CRUD complet + gestion des catégories).
+ * Model admin — images (CRUD complet).
  *
- * Rôle : créer, mettre à jour, catégoriser et supprimer les images de la galerie
+ * Rôle : créer, mettre à jour et supprimer les images de la galerie
  * pour le backoffice.
  *
  * Réutilise IMAGE_BASE_SELECT, findById, mapRowToImage, mapToImageWithUrl
  * de imagesModel.ts pour éviter la duplication.
  *
  * Spécificités :
- *   - setCategories : utilise une transaction (DELETE + INSERT) pour remplacer
- *     atomiquement toutes les catégories d'une image
+ *   - create : INSERT avec category_id (upload atomique — pas de 2e appel nécessaire)
+ *   - reorderInCategory : transaction UPDATE display_order pour toutes les images d'une galerie
  *   - deleteById : supprime l'entrée en base ET les fichiers physiques sur le disque
- *     (fichier original + 3 variantes WebP thumb/md/lg)
- *   - Les variants sont stockés en JSON dans la colonne TEXT `variants`
+ *   - findByCategory : retourne toutes les images d'une galerie, triées par display_order ASC
  *
  * Table principale : images
- * Table de jointure : images_categories
  */
 import fs from "node:fs/promises";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
@@ -47,7 +45,7 @@ async function unlinkSilent(relativePath: string): Promise<void> {
   }
 }
 
-/** Retourne la liste paginée des images de galerie (triées par date de création). */
+/** Retourne la liste paginée des images de galerie (triées par date de création desc). */
 const findPaginated = async (
   page: number,
   limit: number
@@ -61,37 +59,35 @@ const findPaginated = async (
   });
 };
 
-/** Interface de la ligne de jointure images_categories. */
-interface ImageCategoryRow extends RowDataPacket {
-  category_id: number;
-}
-
-/** Retourne la liste des IDs de catégories associées à une image. */
-const findCategoriesByImageId = async (imageId: number): Promise<number[]> => {
-  const rows = await query<ImageCategoryRow[]>(
-    "SELECT category_id FROM images_categories WHERE image_id = ?",
-    [imageId]
+/**
+ * Retourne toutes les images d'une galerie (catégorie), triées par display_order ASC.
+ * Utilisé par AdminGalleryDetailPage pour afficher la grille de réordonnancement.
+ */
+const findByCategory = async (categoryId: number): Promise<ImageWithUrl[]> => {
+  const rows = await query<ImageRow[]>(
+    `${IMAGE_BASE_SELECT} WHERE category_id = ? AND is_in_gallery = 1 ORDER BY display_order ASC, id ASC`,
+    [categoryId]
   );
-  return rows.map((r) => r.category_id);
+  return rows.map((r) => mapToImageWithUrl(mapRowToImage(r)));
 };
 
 /**
- * Crée une image en base.
+ * Crée une image en base avec sa catégorie (upload atomique).
  * Les variants (URLs WebP générées par Sharp) sont stockés en JSON dans la colonne TEXT.
  */
 const create = async (data: ImageCreateData): Promise<ImageWithUrl> => {
   const [result] = await pool.query<ResultSetHeader>(
-    `INSERT INTO images (title, description, path, alt_descr, is_in_gallery, display_order, user_id, article_id, variants)
+    `INSERT INTO images (title, description, path, is_in_gallery, display_order, user_id, article_id, category_id, variants)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       data.title ?? null,
       data.description ?? null,
       data.path,
-      data.alt_descr ?? null,
       data.is_in_gallery ?? false,
       data.display_order ?? 0,
       data.user_id,
       data.article_id ?? null,
+      data.category_id ?? null,
       data.variants ? JSON.stringify(data.variants) : null,
     ]
   );
@@ -113,39 +109,29 @@ const update = async (id: number, data: ImageUpdateData): Promise<ImageWithUrl |
 };
 
 /**
- * Remplace atomiquement toutes les catégories d'une image.
- * Utilise une transaction (BEGIN → DELETE → INSERT → COMMIT/ROLLBACK)
- * pour éviter un état incohérent en cas d'erreur.
- * Lance BadRequestError si un categoryId n'existe pas en base (FK violation).
+ * Réordonne les images d'une galerie.
+ * Reçoit la liste complète des IDs dans le nouvel ordre et met à jour
+ * display_order de chaque image dans une transaction.
+ * Seules les images appartenant à la catégorie donnée sont modifiées.
  */
-const setCategories = async (imageId: number, categoryIds: number[]): Promise<void> => {
+const reorderInCategory = async (categoryId: number, imageIds: number[]): Promise<void> => {
+  if (imageIds.length === 0) return;
+
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
-    // Supprime toutes les associations existantes pour cet imageId
-    await conn.execute("DELETE FROM images_categories WHERE image_id = ?", [imageId]);
 
-    if (categoryIds.length > 0) {
-      // Construit un INSERT multi-valeurs : (imageId, cat1), (imageId, cat2), ...
-      const placeholders = categoryIds.map(() => "(?, ?)").join(", ");
-      const values = categoryIds.flatMap((cid) => [imageId, cid]);
-      await conn.execute(
-        `INSERT INTO images_categories (image_id, category_id) VALUES ${placeholders}`,
-        values
-      );
+    for (let i = 0; i < imageIds.length; i++) {
+      await conn.execute("UPDATE images SET display_order = ? WHERE id = ? AND category_id = ?", [
+        i,
+        imageIds[i],
+        categoryId,
+      ]);
     }
 
     await conn.commit();
   } catch (err) {
     await conn.rollback();
-    const mysqlErr = err as { code?: string };
-    // ER_NO_REFERENCED_ROW_2 : un ou plusieurs categoryIds n'existent pas
-    if (mysqlErr.code === "ER_NO_REFERENCED_ROW_2") {
-      throw new BadRequestError(
-        DEFAULT_ERROR_MESSAGES[ErrorCode.INVALID_CATEGORIES],
-        ErrorCode.INVALID_CATEGORIES
-      );
-    }
     throw err;
   } finally {
     conn.release();
@@ -154,17 +140,14 @@ const setCategories = async (imageId: number, categoryIds: number[]): Promise<vo
 
 /**
  * Supprime une image de la base ET ses fichiers physiques (original + variants WebP).
- * La suppression des fichiers est non-bloquante (unlinkSilent ignore les erreurs).
  * @returns true si une ligne a été supprimée, false si l'image n'existait pas
  */
 const deleteById = async (id: number): Promise<boolean> => {
-  // Charger l'image avant suppression pour connaître les chemins des fichiers
   const img = await findById(id);
 
   const [result] = await pool.query<ResultSetHeader>("DELETE FROM images WHERE id = ?", [id]);
 
   if (result.affectedRows > 0 && img) {
-    // Supprimer le fichier original et toutes les variantes WebP
     await unlinkSilent(img.path);
     if (img.variants) {
       await Promise.all([
@@ -181,9 +164,9 @@ const deleteById = async (id: number): Promise<boolean> => {
 export default {
   findPaginated,
   findById,
-  findCategoriesByImageId,
+  findByCategory,
   create,
   update,
-  setCategories,
+  reorderInCategory,
   deleteById,
 };

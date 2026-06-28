@@ -34,7 +34,6 @@ export interface ArticleRow extends RowDataPacket {
   published_at: Date | string | null;
   featured_image_id: number | null;
   image_path: string | null;
-  image_alt_descr: string | null;
   image_variants: string | ImageVariants | null;
 }
 
@@ -58,7 +57,6 @@ export const mapRow = (row: ArticleRow, includeContent = false): Article => ({
   published_at: toDateString(row.published_at) ?? null,
   featured_image_id: row.featured_image_id,
   imageUrl: buildImageUrl(row.image_path),
-  imageAlt: row.image_alt_descr ?? null,
   imageVariantUrls: buildVariantUrls(row.image_variants),
 });
 
@@ -66,7 +64,7 @@ export const mapRow = (row: ArticleRow, includeContent = false): Article => ({
 const ARTICLE_HEAD = "a.id, a.title, a.slug, a.excerpt";
 const ARTICLE_TAIL = `a.status, a.user_id,
   a.created_at, a.updated_at, a.published_at,
-  a.featured_image_id, i.path AS image_path, i.alt_descr AS image_alt_descr,
+  a.featured_image_id, i.path AS image_path,
   i.variants AS image_variants, u.username AS author_username`;
 const ARTICLE_FROM = `
   FROM articles a

@@ -6,7 +6,7 @@
  * Hiérarchie :
  *   Image          → données brutes de la table `images` (sans URL)
  *   ImageWithUrl   → étend Image avec les URLs absolues construites depuis path
- *   GalleryImage   → étend ImageWithUrl avec les catégories associées
+ *   GalleryImage   → étend ImageWithUrl avec la catégorie associée
  *
  * Variants vs VariantUrls :
  *   ImageVariants    → chemins relatifs stockés en JSON dans la colonne `variants`
@@ -35,11 +35,11 @@ export interface Image {
   title: string | null;
   description: string | null;
   path: string; // chemin relatif, ex: "/uploads/gallery/portrait.jpg"
-  alt_descr: string | null; // texte alternatif pour l'accessibilité
   is_in_gallery: boolean; // visible dans la galerie publique
-  display_order: number; // ordre d'affichage dans la galerie
+  display_order: number; // ordre d'affichage dans la galerie (tri ASC)
   user_id: number;
   article_id: number | null; // ID de l'article associé (ou null si image autonome)
+  category_id: number | null; // ID de la galerie d'appartenance (null si non catégorisée)
   variants?: ImageVariants | null; // chemins des variantes WebP
   created_at: string;
   updated_at: string;
@@ -51,7 +51,7 @@ export interface ImageWithUrl extends Image {
   variantUrls?: ImageVariantUrls; // URLs absolues des variantes WebP
 }
 
-/** Image de galerie avec ses catégories associées. */
+/** Image de galerie avec sa catégorie associée. */
 export interface GalleryImage extends ImageWithUrl {
   categories: { id: number; name: string }[];
 }
@@ -61,11 +61,11 @@ export interface ImageCreateData {
   title?: string | null;
   description?: string | null;
   path: string;
-  alt_descr?: string | null;
   is_in_gallery?: boolean;
   display_order?: number;
   user_id: number;
   article_id?: number | null;
+  category_id?: number | null;
   variants?: ImageVariants | null; // sérialisé en JSON pour le stockage MySQL
 }
 
@@ -73,8 +73,10 @@ export interface ImageCreateData {
 export interface ImageUpdateData {
   title?: string | null;
   description?: string | null;
-  alt_descr?: string | null;
   is_in_gallery?: boolean;
   display_order?: number;
   article_id?: number | null;
+  category_id?: number | null;
+  path?: string;
+  variants?: ImageVariants | null;
 }

@@ -104,28 +104,51 @@ CREATE TABLE images (
     title VARCHAR(255),
     description TEXT,
     path VARCHAR(255) NOT NULL,              -- chemin relatif sur le disque (ex: /uploads/gallery/img.jpg)
-    alt_descr VARCHAR(255),                  -- texte alternatif pour l'accessibilité
     is_in_gallery BOOLEAN DEFAULT FALSE,     -- true = visible dans la galerie publique
-    display_order SMALLINT UNSIGNED DEFAULT 0, -- ordre d'affichage (tri ASC dans les requêtes)
+    display_order SMALLINT UNSIGNED DEFAULT 0, -- ordre d'affichage dans la galerie (tri ASC)
     user_id INT UNSIGNED NOT NULL,            -- uploader (FK vers users, CASCADE delete)
     article_id INT UNSIGNED,                  -- article associé (NULL si image autonome/profil)
+    category_id INT UNSIGNED NULL,            -- galerie d'appartenance (SET NULL si catégorie supprimée)
     variants JSON NULL,                       -- { "thumb": "/...", "md": "/...", "lg": "/..." }
                                              -- chemins relatifs des variantes WebP générées par Sharp
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_gallery (is_in_gallery),        -- filtre public de la galerie
     INDEX idx_display_order (display_order),  -- tri de la galerie
+    INDEX idx_category (category_id),         -- filtre par galerie
     CONSTRAINT pk_images PRIMARY KEY (id),
     CONSTRAINT fk_images_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_images_article FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE SET NULL
+    -- fk_images_category ajouté après categories (dépendance circulaire potentielle avec cover_image_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 -- ============================================================
--- Résolution des dépendances circulaires articles <-> images
--- et users <-> images.
+-- TABLE categories
+-- Catégories (= galeries) pour organiser les images.
+-- Une image appartient à au plus 1 catégorie (FK directe sur images).
+-- cover_image_id : image de couverture choisie manuellement (SET NULL si supprimée).
+-- ============================================================
+
+CREATE TABLE categories (
+    id INT UNSIGNED AUTO_INCREMENT,
+    name VARCHAR(50) NOT NULL,
+    slug VARCHAR(50) NOT NULL,               -- URL-safe, généré depuis name (utilisé dans ?category=slug)
+    display_order SMALLINT UNSIGNED DEFAULT 0, -- ordre dans la navigation de la galerie
+    cover_image_id INT UNSIGNED NULL,         -- couverture manuelle (NULL = première image par display_order)
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT pk_categories PRIMARY KEY (id),
+    CONSTRAINT uk_categories_name UNIQUE (name),
+    CONSTRAINT uk_categories_slug UNIQUE (slug)
+    -- fk_categories_cover ajouté après (dépendance circulaire images ↔ categories)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- ============================================================
+-- Résolution des dépendances circulaires
+-- articles ↔ images, users ↔ images, images ↔ categories.
 -- Ces ALTER TABLE doivent être exécutés après la création des
--- deux tables concernées.
+-- tables concernées.
 -- ============================================================
 
 -- articles.featured_image_id → images.id
@@ -136,42 +159,13 @@ ALTER TABLE articles
 ALTER TABLE users
     ADD CONSTRAINT fk_users_profile_image FOREIGN KEY (profile_image_id) REFERENCES images(id) ON DELETE SET NULL;
 
+-- images.category_id → categories.id
+ALTER TABLE images
+    ADD CONSTRAINT fk_images_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL;
 
--- ============================================================
--- TABLE categories
--- Catégories pour organiser la galerie d'images.
--- Une image peut appartenir à au plus 1 catégorie (contrainte
--- enforced côté API dans imageCategoriesSchema.max(1)).
--- ============================================================
-
-CREATE TABLE categories (
-    id INT UNSIGNED AUTO_INCREMENT,
-    name VARCHAR(50) NOT NULL,
-    slug VARCHAR(50) NOT NULL,               -- URL-safe, généré depuis name (utilisé dans ?category=slug)
-    display_order SMALLINT UNSIGNED DEFAULT 0, -- ordre dans la navigation de la galerie
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT pk_categories PRIMARY KEY (id),
-    CONSTRAINT uk_categories_name UNIQUE (name),
-    CONSTRAINT uk_categories_slug UNIQUE (slug)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-
--- ============================================================
--- TABLE images_categories
--- Table de jointure N:M entre images et categories.
--- Double PK (image_id, category_id) garantit l'unicité de la
--- relation. Cascade DELETE dans les deux sens.
--- ============================================================
-
-CREATE TABLE images_categories (
-    image_id INT UNSIGNED NOT NULL,
-    category_id INT UNSIGNED NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_category (category_id),         -- accélère les requêtes filtrant par catégorie
-    CONSTRAINT pk_images_categories PRIMARY KEY (image_id, category_id),
-    CONSTRAINT fk_images_categories_image FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE,
-    CONSTRAINT fk_images_categories_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- categories.cover_image_id → images.id
+ALTER TABLE categories
+    ADD CONSTRAINT fk_categories_cover FOREIGN KEY (cover_image_id) REFERENCES images(id) ON DELETE SET NULL;
 
 
 -- ============================================================
@@ -195,3 +189,42 @@ CREATE TABLE guestbook_entries (
     INDEX idx_created (created_at),           -- tri chronologique
     CONSTRAINT pk_guestbook PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- ============================================================
+-- SCRIPT DE MIGRATION — Base existante → schéma cible
+-- À exécuter UNE SEULE FOIS sur une base déjà initialisée avec
+-- l'ancien schéma (images_categories). Les nouvelles installations
+-- utilisent directement le schéma ci-dessus.
+-- ============================================================
+
+-- 1. Ajouter category_id sur images
+-- ALTER TABLE images
+--     ADD COLUMN category_id INT UNSIGNED NULL,
+--     ADD INDEX idx_category (category_id),
+--     ADD CONSTRAINT fk_images_category
+--         FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL;
+
+-- 2. Ajouter cover_image_id sur categories
+-- ALTER TABLE categories
+--     ADD COLUMN cover_image_id INT UNSIGNED NULL,
+--     ADD CONSTRAINT fk_categories_cover
+--         FOREIGN KEY (cover_image_id) REFERENCES images(id) ON DELETE SET NULL;
+
+-- 3. Migrer les associations depuis images_categories (max 1 par image)
+-- UPDATE images i
+--     JOIN images_categories ic ON ic.image_id = i.id
+--     SET i.category_id = ic.category_id;
+
+-- 4. Initialiser display_order : rang croissant par created_at DESC dans chaque galerie
+-- UPDATE images i
+--     JOIN (
+--         SELECT id,
+--             ROW_NUMBER() OVER (PARTITION BY category_id ORDER BY created_at DESC) - 1 AS new_order
+--         FROM images
+--         WHERE category_id IS NOT NULL AND is_in_gallery = 1
+--     ) ranked ON ranked.id = i.id
+--     SET i.display_order = ranked.new_order;
+
+-- 5. Supprimer la table de jointure devenue inutile
+-- DROP TABLE images_categories;

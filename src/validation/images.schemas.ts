@@ -1,22 +1,15 @@
 /**
  * Schémas Zod de validation pour les images de galerie.
  *
- * Rôle : valider les corps de requête pour les routes images admin et publiques.
- *
  * Sync avec Front2 :
- *   BASE partagée avec Front2/src/validation/schemas.ts — imageMetadataFormSchema,
- *   imageCategoriesFormSchema.
- *   DELTA Back2 intentionnel (imageMetadataSchema) : is_in_gallery, display_order et article_id
- *   acceptent des strings via z.union + transform → Multer envoie tout en multipart/form-data,
- *   les valeurs numériques et booléennes arrivent donc comme strings.
- *   DELTA Back2 intentionnel (imageCategoriesSchema) : categoryIds.max(1)
- *   → contrainte business (1 catégorie max par image) enforced côté API.
+ *   imageMetadataSchema  → imageMetadataFormSchema dans Front2/src/validation/schemas.ts
+ *   imageUpdateSchema    → idem (aucun delta intentionnel sur les champs partagés)
  *
  * Schémas :
- *   imageMetadataSchema      → POST /api/admin/images (après upload Multer)
- *   imageUpdateSchema        → PUT /api/admin/images/:id (JSON standard)
- *   imageCategoriesSchema    → PUT /api/admin/images/:id/categories
- *   galleryBrowseQuerySchema → GET /api/images/gallery (?category=slug)
+ *   imageMetadataSchema       → POST /api/admin/images (multipart, métadonnées)
+ *   imageUpdateSchema         → PUT /api/admin/images/:id
+ *   reorderImagesSchema       → PATCH /api/admin/categories/:id/images/reorder
+ *   galleryBrowseQuerySchema  → GET /api/images/gallery?category=slug
  */
 import { z } from "zod";
 
@@ -24,10 +17,16 @@ import { z } from "zod";
 export const imageMetadataSchema = z.object({
   title: z.string().max(255).nullable().optional(),
   description: z.string().nullable().optional(),
-  alt_descr: z.string().max(255).nullable().optional(),
   is_in_gallery: z.union([z.boolean(), z.string().transform((v) => v === "true")]).optional(),
   display_order: z.union([z.number().int().min(0), z.string().transform(Number)]).optional(),
   article_id: z
+    .union([
+      z.number().int().positive(),
+      z.null(),
+      z.string().transform((v) => (v === "" ? null : Number(v))),
+    ])
+    .optional(),
+  category_id: z
     .union([
       z.number().int().positive(),
       z.null(),
@@ -40,15 +39,15 @@ export const imageMetadataSchema = z.object({
 export const imageUpdateSchema = z.object({
   title: z.string().max(255).nullable().optional(),
   description: z.string().nullable().optional(),
-  alt_descr: z.string().max(255).nullable().optional(),
   is_in_gallery: z.boolean().optional(),
   display_order: z.number().int().min(0).optional(),
   article_id: z.union([z.number().int().positive(), z.null()]).optional(),
+  category_id: z.union([z.number().int().positive(), z.null()]).optional(),
 });
 
-/** Body PUT /api/admin/images/:id/categories. */
-export const imageCategoriesSchema = z.object({
-  categoryIds: z.array(z.number().int().positive()).max(1),
+/** Body PATCH /api/admin/categories/:id/images/reorder. */
+export const reorderImagesSchema = z.object({
+  imageIds: z.array(z.number().int().positive()).min(1),
 });
 
 /** Query GET /api/images/gallery (?category=slug). */
