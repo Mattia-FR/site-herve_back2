@@ -118,53 +118,13 @@ export async function runSeeds(connection: Connection): Promise<void> {
     number,
     number | null,
   ][] = [
-    [
-      "Portrait",
-      "Portrait réalisé aux crayons",
-      "/uploads/gallery/portrait.jpg",
-      true,
-      1,
-      1,
-      1
-    ],
+    ["Portrait", "Portrait réalisé aux crayons", "/uploads/gallery/portrait.jpg", true, 1, 1, 1],
     ["Paysage", "Paysage à l'aquarelle", "/uploads/gallery/paysage.jpg", false, 0, 1, 1],
-    [
-      "Esquisse",
-      "Croquis préparatoire",
-      "/uploads/gallery/esquisse.jpg",
-      true,
-      2,
-      2,
-      2
-    ],
+    ["Esquisse", "Croquis préparatoire", "/uploads/gallery/esquisse.jpg", true, 2, 2, 2],
     ["Détail", "Détail d'une réalisation", "/uploads/gallery/detail.jpg", false, 0, 2, 2],
-    [
-      "Galerie 1",
-      "Première image de galerie",
-      "/uploads/gallery/galerie-1.jpg",
-      true,
-      3,
-      1,
-      3
-    ],
-    [
-      "Galerie 2",
-      "Deuxième image de galerie",
-      "/uploads/gallery/galerie-2.jpg",
-      true,
-      4,
-      2,
-      4
-    ],
-    [
-      "Hors article",
-      "Image sans article lié",
-      "/uploads/gallery/standalone.jpg",
-      true,
-      5,
-      1,
-      null
-    ],
+    ["Galerie 1", "Première image de galerie", "/uploads/gallery/galerie-1.jpg", true, 3, 1, 3],
+    ["Galerie 2", "Deuxième image de galerie", "/uploads/gallery/galerie-2.jpg", true, 4, 2, 4],
+    ["Hors article", "Image sans article lié", "/uploads/gallery/standalone.jpg", true, 5, 1, null],
     ["4", "Image 4", "/uploads/gallery/4.jpg", true, 6, 1, null],
     ["5", "Image 5", "/uploads/gallery/5.jpg", true, 7, 1, null],
     ["6", "Image 6", "/uploads/gallery/6.jpg", true, 8, 1, null],
@@ -173,87 +133,23 @@ export async function runSeeds(connection: Connection): Promise<void> {
     ["9", "Image 9", "/uploads/gallery/9.jpg", true, 11, 1, null],
     ["Anne", "Portrait Anne", "/uploads/gallery/anne.jpg", true, 12, 1, null],
     ["Batiste", "Portrait Batiste", "/uploads/gallery/batiste.jpg", true, 13, 1, null],
-    [
-      "Christophe",
-      "Portrait Christophe",
-      "/uploads/gallery/christophe.jpg",
-      true,
-      14,
-      1,
-      null
-    ],
+    ["Christophe", "Portrait Christophe", "/uploads/gallery/christophe.jpg", true, 14, 1, null],
     ["Erwan", "Portrait Erwan", "/uploads/gallery/erwan.jpg", true, 15, 1, null],
-    [
-      "François",
-      "Portrait François",
-      "/uploads/gallery/françois-.jpg",
-      true,
-      16,
-      1,
-      null
-    ],
-    [
-      "Gérard A4",
-      "Gérard format A4",
-      "/uploads/gallery/gerard-a4.jpg",
-      true,
-      17,
-      1,
-      null
-    ],
+    ["François", "Portrait François", "/uploads/gallery/françois-.jpg", true, 16, 1, null],
+    ["Gérard A4", "Gérard format A4", "/uploads/gallery/gerard-a4.jpg", true, 17, 1, null],
     ["Gérard", "Portrait Gérard", "/uploads/gallery/gerard.jpg", true, 18, 1, null],
     ["Hervé", "Portrait Hervé", "/uploads/gallery/herve.jpg", true, 19, 1, null],
-    [
-      "Jacqueline",
-      "Portrait Jacqueline",
-      "/uploads/gallery/jacqueline.jpg",
-      true,
-      20,
-      1,
-      null
-    ],
+    ["Jacqueline", "Portrait Jacqueline", "/uploads/gallery/jacqueline.jpg", true, 20, 1, null],
     ["Jérôme", "Portrait Jérôme", "/uploads/gallery/jerome.jpg", true, 21, 1, null],
     ["Julie", "Portrait Julie", "/uploads/gallery/julie.jpg", true, 22, 1, null],
     ["Laure", "Portrait Laure", "/uploads/gallery/laure.jpg", true, 23, 1, null],
     ["Magali", "Portrait Magali", "/uploads/gallery/magali.jpg", true, 24, 1, null],
     ["Magalie", "Portrait Magalie", "/uploads/gallery/magalie.jpg", true, 25, 1, null],
-    [
-      "Matière 019",
-      "Réalisation MATIERE019",
-      "/uploads/gallery/MATIERE019.jpg",
-      true,
-      26,
-      1,
-      null
-    ],
-    [
-      "Ophélie A4",
-      "Ophélie format A4",
-      "/uploads/gallery/ophelie-a4.jpg",
-      true,
-      27,
-      1,
-      null
-    ],
-    [
-      "Patricia",
-      "Portrait Patricia",
-      "/uploads/gallery/patricia.jpg",
-      true,
-      28,
-      1,
-      null
-    ],
+    ["Matière 019", "Réalisation MATIERE019", "/uploads/gallery/MATIERE019.jpg", true, 26, 1, null],
+    ["Ophélie A4", "Ophélie format A4", "/uploads/gallery/ophelie-a4.jpg", true, 27, 1, null],
+    ["Patricia", "Portrait Patricia", "/uploads/gallery/patricia.jpg", true, 28, 1, null],
     ["Pauline", "Portrait Pauline", "/uploads/gallery/pauline.jpg", true, 29, 1, null],
-    [
-      "Philippe",
-      "Portrait Philippe",
-      "/uploads/gallery/philippe.jpg",
-      true,
-      30,
-      1,
-      null
-    ],
+    ["Philippe", "Portrait Philippe", "/uploads/gallery/philippe.jpg", true, 30, 1, null],
     ["PUBL.013", "Publication 013", "/uploads/gallery/PUBL.013.jpg", true, 31, 1, null],
     ["PUBL003", "Publication 003", "/uploads/gallery/PUBL003.jpg", true, 32, 1, null],
     ["PUBL005", "Publication 005", "/uploads/gallery/PUBL005.jpg", true, 33, 1, null],
@@ -271,33 +167,9 @@ export async function runSeeds(connection: Connection): Promise<void> {
     ["SANSTIT8", "Sans titre 8", "/uploads/gallery/SANSTIT8.jpg", true, 45, 1, null],
     ["SANSTITR", "Sans titre R", "/uploads/gallery/SANSTITR.jpg", true, 46, 1, null],
     ["Tag 046", "Tag 046", "/uploads/gallery/tag 046.jpg", true, 47, 1, null],
-    [
-      "Sans titre",
-      "Image sans titre",
-      "/uploads/gallery/Untitled.jpg",
-      true,
-      48,
-      1,
-      null
-    ],
-    [
-      "Vanessa 2 A4",
-      "Vanessa 2 format A4",
-      "/uploads/gallery/vanessa-2-a4.jpg",
-      true,
-      49,
-      1,
-      null
-    ],
-    [
-      "Vanessa A4",
-      "Vanessa format A4",
-      "/uploads/gallery/vanessa-A4.jpg",
-      true,
-      50,
-      1,
-      null
-    ],
+    ["Sans titre", "Image sans titre", "/uploads/gallery/Untitled.jpg", true, 48, 1, null],
+    ["Vanessa 2 A4", "Vanessa 2 format A4", "/uploads/gallery/vanessa-2-a4.jpg", true, 49, 1, null],
+    ["Vanessa A4", "Vanessa format A4", "/uploads/gallery/vanessa-A4.jpg", true, 50, 1, null],
     ["Vanessa", "Portrait Vanessa", "/uploads/gallery/vanessa.jpg", true, 51, 1, null],
     ["Willy", "Portrait Willy", "/uploads/gallery/willy.jpg", true, 52, 1, null],
   ];
@@ -403,10 +275,7 @@ export async function runSeeds(connection: Connection): Promise<void> {
   ];
 
   for (const [imageId, categoryId] of imageCategoryMap) {
-    await connection.query("UPDATE images SET category_id = ? WHERE id = ?", [
-      categoryId,
-      imageId,
-    ]);
+    await connection.query("UPDATE images SET category_id = ? WHERE id = ?", [categoryId, imageId]);
   }
 
   // ============================================

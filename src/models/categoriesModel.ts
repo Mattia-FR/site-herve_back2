@@ -38,7 +38,7 @@ export interface CategoryRow extends RowDataPacket {
  */
 const mapCoverImage = (
   path: string | null,
-  variantsRaw: string | null,
+  variantsRaw: string | null
 ): CategoryCoverImage | null => {
   if (!path) return null;
   const imageUrl = buildImageUrl(path);
