@@ -24,7 +24,7 @@ import type { ImageCreateData, ImageUpdateData, ImageWithUrl } from "../types/im
 import type { PaginatedResponse } from "../types/pagination";
 import { buildUpdateQuery } from "../utils/db/buildUpdateQuery";
 import { paginateQuery } from "../utils/db/paginate";
-import pool, { query } from "./db";
+import pool, { query, withTransaction } from "./db";
 import {
   IMAGE_BASE_SELECT,
   type ImageRow,
@@ -117,10 +117,7 @@ const update = async (id: number, data: ImageUpdateData): Promise<ImageWithUrl |
 const reorderInCategory = async (categoryId: number, imageIds: number[]): Promise<void> => {
   if (imageIds.length === 0) return;
 
-  const conn = await pool.getConnection();
-  try {
-    await conn.beginTransaction();
-
+  await withTransaction(async (conn) => {
     for (let i = 0; i < imageIds.length; i++) {
       await conn.execute("UPDATE images SET display_order = ? WHERE id = ? AND category_id = ?", [
         i,
@@ -128,14 +125,7 @@ const reorderInCategory = async (categoryId: number, imageIds: number[]): Promis
         categoryId,
       ]);
     }
-
-    await conn.commit();
-  } catch (err) {
-    await conn.rollback();
-    throw err;
-  } finally {
-    conn.release();
-  }
+  });
 };
 
 /**

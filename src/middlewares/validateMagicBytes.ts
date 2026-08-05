@@ -34,8 +34,8 @@ export async function validateMagicBytes(
 
   try {
     // Import dynamique pour isoler la dépendance optionnelle
-    const { fileTypeFromFile } = await import("file-type");
-    const detected = await fileTypeFromFile(req.file.path);
+    const { fromFile } = await import("file-type");
+    const detected = await fromFile(req.file.path);
 
     if (!detected || !ALLOWED_IMAGE_MIME_SET.has(detected.mime)) {
       // Supprimer le fichier rejeté pour ne pas encombrer le disque

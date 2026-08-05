@@ -13,7 +13,7 @@
  *   - `pool` (default) : le pool MySQL2 pour les transactions et les requêtes avancées
  *   - `query<T>` (named) : wrapper utilitaire typé pour les requêtes simples (SELECT, INSERT, etc.)
  */
-import mysql, { type Pool } from "mysql2/promise";
+import mysql, { type Pool, type PoolConnection } from "mysql2/promise";
 import { env } from "../config/env";
 
 type PoolQueryParams = Parameters<Pool["query"]>[1];
@@ -37,6 +37,25 @@ const pool = mysql.createPool({
 export async function query<T>(sql: string, params?: PoolQueryParams): Promise<T> {
   const [rows] = await pool.query(sql, params);
   return rows as T;
+}
+
+/**
+ * Exécute `fn` dans une transaction MySQL (BEGIN / COMMIT / ROLLBACK).
+ * Libère toujours la connexion du pool, même en cas d'erreur.
+ */
+export async function withTransaction<T>(fn: (conn: PoolConnection) => Promise<T>): Promise<T> {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const result = await fn(conn);
+    await conn.commit();
+    return result;
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
 }
 
 export default pool;

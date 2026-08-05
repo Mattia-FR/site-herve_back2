@@ -6,10 +6,11 @@
  *
  * Ordre : création en fin de liste si display_order absent ; insertion à une
  * position donnée avec décalage des voisins ; mise à jour avec algorithme de
- * décalage (transactions MySQL).
+ * décalage (transactions MySQL + SELECT FOR UPDATE).
  *
  * Note : la suppression d'une catégorie est bloquée si des images lui sont
- * encore assignées (check applicatif → 400 INVALID_REFERENCE).
+ * encore assignées (check applicatif → 400 INVALID_REFERENCE), sous verrou
+ * de ligne pour éviter une course COUNT/DELETE.
  * Avec cover_image_id ON DELETE SET NULL, la FK est nettoyée automatiquement
  * si l'image de couverture est supprimée.
  *
@@ -22,10 +23,12 @@ import type { Category, CategoryCreateData, CategoryUpdateData } from "../types/
 import { buildUpdateQuery } from "../utils/db/buildUpdateQuery";
 import { applySlugIfChanged, buildSlug } from "../utils/string/slug";
 import publicCategoriesModel, { findById } from "./categoriesModel";
-import pool from "./db";
+import pool, { withTransaction } from "./db";
 
 type MaxOrderRow = RowDataPacket & { max_order: number };
 type CountRow = RowDataPacket & { cnt: number };
+type CategoryLockRow = RowDataPacket & { id: number; name: string; display_order: number };
+type CategoryIdRow = RowDataPacket & { id: number };
 
 /** Calcule la prochaine position en fin de liste. */
 const getNextDisplayOrder = async (conn: PoolConnection): Promise<number> => {
@@ -77,11 +80,8 @@ const shiftOrdersForUpdate = async (
  */
 const create = async (data: CategoryCreateData): Promise<Category> => {
   const slug = buildSlug(data.name);
-  const conn = await pool.getConnection();
 
-  try {
-    await conn.beginTransaction();
-
+  const insertId = await withTransaction(async (conn) => {
     const displayOrder =
       data.display_order === undefined ? await getNextDisplayOrder(conn) : data.display_order;
 
@@ -94,34 +94,29 @@ const create = async (data: CategoryCreateData): Promise<Category> => {
       [data.name, slug, displayOrder]
     );
 
-    await conn.commit();
+    return result.insertId;
+  });
 
-    const created = await findById(result.insertId);
-    if (!created) throw new NotFoundError(NotFoundResource.CATEGORY);
-    return created;
-  } catch (err) {
-    await conn.rollback();
-    throw err;
-  } finally {
-    conn.release();
-  }
+  const created = await findById(insertId);
+  if (!created) throw new NotFoundError(NotFoundResource.CATEGORY);
+  return created;
 };
 
 /**
  * Met à jour une catégorie.
  * Régénère le slug si le nom a changé (applySlugIfChanged).
- * Si display_order change, applique le décalage des voisins en transaction.
+ * Si display_order change, applique le décalage des voisins en transaction
+ * après verrouillage de la ligne (SELECT FOR UPDATE).
  */
 const update = async (id: number, data: CategoryUpdateData): Promise<Category | null> => {
-  const cat = await findById(id);
-  if (!cat) return null;
-
   const newOrder = data.display_order;
-  const orderChanged = newOrder !== undefined && newOrder !== cat.display_order;
 
-  const payload = applySlugIfChanged({ ...data }, data.name, cat.name) as CategoryUpdateData;
+  // Pas de réordonnancement : UPDATE simple hors transaction
+  if (newOrder === undefined) {
+    const cat = await findById(id);
+    if (!cat) return null;
 
-  if (!orderChanged) {
+    const payload = applySlugIfChanged({ ...data }, data.name, cat.name) as CategoryUpdateData;
     const q = buildUpdateQuery("categories", payload);
     if (!q) return cat;
 
@@ -129,53 +124,68 @@ const update = async (id: number, data: CategoryUpdateData): Promise<Category | 
     return findById(id);
   }
 
-  const conn = await pool.getConnection();
+  const updated = await withTransaction(async (conn) => {
+    const [rows] = await conn.query<CategoryLockRow[]>(
+      "SELECT id, name, display_order FROM categories WHERE id = ? FOR UPDATE",
+      [id]
+    );
+    const locked = rows[0];
+    if (!locked) return false;
 
-  try {
-    await conn.beginTransaction();
-    await shiftOrdersForUpdate(conn, id, cat.display_order, newOrder);
+    const orderChanged = newOrder !== locked.display_order;
+    const payload = applySlugIfChanged({ ...data }, data.name, locked.name) as CategoryUpdateData;
+
+    if (orderChanged) {
+      await shiftOrdersForUpdate(conn, id, locked.display_order, newOrder);
+    }
 
     const q = buildUpdateQuery("categories", payload);
     if (q) {
       await conn.query<ResultSetHeader>(q.sql, [...q.values, id]);
-    } else {
+    } else if (orderChanged) {
       await conn.query<ResultSetHeader>("UPDATE categories SET display_order = ? WHERE id = ?", [
         newOrder,
         id,
       ]);
     }
 
-    await conn.commit();
-    return findById(id);
-  } catch (err) {
-    await conn.rollback();
-    throw err;
-  } finally {
-    conn.release();
-  }
+    return true;
+  });
+
+  if (!updated) return null;
+  return findById(id);
 };
 
 /**
  * Supprime une catégorie par son ID.
  * Refusé si des images lui sont encore assignées (évite les images orphelines).
+ * Le COUNT et le DELETE sont atomiques sous verrou de ligne.
  * @returns true si supprimée, false si introuvable
  */
 const deleteById = async (id: number): Promise<boolean> => {
-  const [countRows] = await pool.query<CountRow[]>(
-    "SELECT COUNT(*) AS cnt FROM images WHERE category_id = ? AND is_in_gallery = 1",
-    [id]
-  );
-  const count = Number(countRows[0]?.cnt ?? 0);
-
-  if (count > 0) {
-    throw new BadRequestError(
-      DEFAULT_ERROR_MESSAGES[ErrorCode.INVALID_REFERENCE],
-      ErrorCode.INVALID_REFERENCE
+  return withTransaction(async (conn) => {
+    const [catRows] = await conn.query<CategoryIdRow[]>(
+      "SELECT id FROM categories WHERE id = ? FOR UPDATE",
+      [id]
     );
-  }
+    if (!catRows[0]) return false;
 
-  const [result] = await pool.query<ResultSetHeader>("DELETE FROM categories WHERE id = ?", [id]);
-  return result.affectedRows > 0;
+    const [countRows] = await conn.query<CountRow[]>(
+      "SELECT COUNT(*) AS cnt FROM images WHERE category_id = ? AND is_in_gallery = 1",
+      [id]
+    );
+    const count = Number(countRows[0]?.cnt ?? 0);
+
+    if (count > 0) {
+      throw new BadRequestError(
+        DEFAULT_ERROR_MESSAGES[ErrorCode.INVALID_REFERENCE],
+        ErrorCode.INVALID_REFERENCE
+      );
+    }
+
+    const [result] = await conn.query<ResultSetHeader>("DELETE FROM categories WHERE id = ?", [id]);
+    return result.affectedRows > 0;
+  });
 };
 
 /**
