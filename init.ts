@@ -25,6 +25,14 @@ if (!DB_HOST || !DB_USER || !DB_PASSWORD || !DB_NAME) {
 }
 
 async function initDatabase(): Promise<void> {
+  // Protection critique : ne jamais exécuter ce script en production
+  if (process.env.NODE_ENV === "production") {
+    console.error("❌ ERREUR CRITIQUE: init:db ne doit JAMAIS être exécuté en production!");
+    console.error("Cette commande DROP DATABASE détruit toutes les données.");
+    console.error("En production, utiliser uniquement schema.sql + création manuelle des comptes.");
+    process.exit(1);
+  }
+
   // Connexion sans sélectionner de base (pour pouvoir la supprimer/créer)
   const connection = await mysql.createConnection({
     host: DB_HOST,

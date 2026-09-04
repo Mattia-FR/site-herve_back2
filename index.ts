@@ -27,9 +27,9 @@ async function main() {
   // connexion MySQL, création des dossiers uploads, vérification SMTP optionnelle.
   await checkStartup();
 
-  // Route de diagnostic rapide (non préfixée /api) pour vérifier que le serveur répond.
+  // Route racine minimale (health principal sur /api/health)
   app.get("/", (_req, res) => {
-    res.status(200).send(`Je suis sur l'API http://localhost:${port}`);
+    res.status(404).json({ error: 'Not Found' });
   });
 
   app.listen(port, () => {
