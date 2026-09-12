@@ -70,6 +70,21 @@ export const findById = async (id: number): Promise<User | null> => {
 };
 
 /**
+ * Retourne un utilisateur par son ID, avec le hash du mot de passe.
+ * Utilisé pour vérifier le mot de passe actuel lors d'un changement de mot de passe.
+ */
+export const findByIdWithPassword = async (
+  id: number
+): Promise<(User & { password: string }) | null> => {
+  const rows = await query<UserWithPasswordRow[]>(
+    "SELECT id, username, email, password, first_name, last_name, tagline, bio, hero_text, quote_text, quote_author, profile_image_id, created_at, updated_at FROM users WHERE id = ?",
+    [id]
+  );
+  if (!rows[0]) return null;
+  return { ...mapRowToUser(rows[0]), password: rows[0].password };
+};
+
+/**
  * Retourne un utilisateur par son email, avec le hash du mot de passe.
  * Utilisé uniquement par authController pour vérifier les credentials au login.
  */
@@ -128,6 +143,7 @@ const rotateRefreshToken = async (
 
 export default {
   findById,
+  findByIdWithPassword,
   findByEmail,
   saveRefreshToken,
   findRefreshTokenHash,

@@ -1,8 +1,12 @@
 {
-  "name": "backend-template",
+  "name": "site-herve-backend",
   "version": "1.0.0",
-  "description": "Template backend Node.js + Express + MySQL + TypeScript",
+  "description": "Backend API pour le site de l'artiste Hervé Petit",
   "main": "dist/index.js",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=9.0.0"
+  },
   "scripts": {
     "dev": "nodemon --exec ts-node index.ts",
     "build": "tsc",
