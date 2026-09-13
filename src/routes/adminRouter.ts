@@ -22,6 +22,7 @@ import categoriesAdminRouter from "./categoriesAdminRouter";
 import guestbookAdminRouter from "./guestbookAdminRouter";
 import imagesAdminRouter from "./imagesAdminRouter";
 import messagesAdminRouter from "./messagesAdminRouter";
+import rebuildAdminRouter from "./rebuildAdminRouter";
 import statsAdminRouter from "./statsAdminRouter";
 import usersAdminRouter from "./usersAdminRouter";
 
@@ -37,5 +38,6 @@ router.use("/categories", categoriesAdminRouter);
 router.use("/messages", messagesAdminRouter);
 router.use("/guestbook", guestbookAdminRouter);
 router.use("/stats", statsAdminRouter);
+router.use("/rebuild", rebuildAdminRouter);
 
 export default router;
