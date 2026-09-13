@@ -21,6 +21,7 @@ import { checkStartup } from "./src/config/startup";
 import logger from "./src/config/logger";
 
 const port = env.PORT;
+const host = env.HOST;
 
 async function main() {
   // Vérifications critiques avant d'accepter des requêtes :
@@ -32,8 +33,9 @@ async function main() {
     res.status(404).json({ error: 'Not Found' });
   });
 
-  app.listen(port, () => {
-    logger.info({ message: "Server started", port });
+  // Écoute sur 127.0.0.1 par défaut : l'API n'est joignable que via Nginx (défense en profondeur).
+  app.listen(port, host, () => {
+    logger.info({ message: "Server started", host, port });
   });
 }
 

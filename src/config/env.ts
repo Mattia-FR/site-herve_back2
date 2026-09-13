@@ -39,6 +39,8 @@ const envSchema = z.object({
     .string()
     .min(32, "REFRESH_TOKEN_SECRET doit faire au moins 32 caractères"),
   PORT: z.coerce.number().int().positive().default(4242),
+  // Interface d'écoute : 127.0.0.1 par défaut (Nginx proxy local, pas d'exposition publique).
+  HOST: z.string().min(1).default("127.0.0.1"),
   CORS_ORIGIN: z.string().url().optional(),
   API_URL: z.string().url().optional(),
   IMAGE_BASE_URL: z.string().url().optional(),
