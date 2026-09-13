@@ -13,6 +13,7 @@
  *   ├── ValidationFailedError  → 400, code VALIDATION_FAILED + détails par champ (Zod)
  *   ├── UnauthorizedError      → 401, code UNAUTHORIZED / TOKEN_EXPIRED / TOKEN_INVALID
  *   ├── BadRequestError        → 400, code BAD_REQUEST / INVALID_ID
+ *   ├── TooManyRequestsError   → 429, code RATE_LIMITED
  *   └── InternalError          → 500, code INTERNAL_ERROR
  *
  * Usage : throw new NotFoundError(NotFoundResource.ARTICLE)
@@ -99,6 +100,13 @@ export class BadRequestError extends AppError {
     code: ErrorCodeValue = ErrorCode.BAD_REQUEST
   ) {
     super(message, 400, code);
+  }
+}
+
+/** Trop de requêtes (rate limiting). */
+export class TooManyRequestsError extends AppError {
+  constructor(message = DEFAULT_ERROR_MESSAGES[ErrorCode.RATE_LIMITED]) {
+    super(message, 429, ErrorCode.RATE_LIMITED);
   }
 }
 

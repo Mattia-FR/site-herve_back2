@@ -5,3 +5,7 @@ dist/
 logs/
 .DS_Store
 migrations/
+
+# Rebuild trigger files (created by admin when triggering frontend rebuild)
+.rebuild-trigger
+.rebuild.lock
