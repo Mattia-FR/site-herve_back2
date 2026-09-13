@@ -121,6 +121,7 @@ Voir [`.env.sample`](./.env.sample).
 | `ACCESS_TOKEN_SECRET`, `REFRESH_TOKEN_SECRET` | Oui | JWT (≥ 32 bytes base64 chacun) |
 | `CORS_ORIGIN` | Recommandé | URL du front (défaut `http://localhost:5173`) |
 | `PORT` | Non | Port API (défaut `4242`) |
+| `HOST` | Non | Interface d'écoute (défaut `127.0.0.1`, local only derrière Nginx) |
 | `API_URL`, `IMAGE_BASE_URL` | Non | URLs publiques (CSP, liens images) |
 | `NODE_ENV` | Non | `development` / `production` |
 | `LOG_LEVEL`, `LOG_DIR` | Non | Configuration Winston |
