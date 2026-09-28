@@ -163,7 +163,7 @@ const uploadFeaturedImage = asyncHandler(async (req: Request, res: Response) => 
 
   // Créer l'entrée image en base (sans galerie) pour avoir un ID référençable
   const image = await imagesAdminModel.create({
-    path: `/uploads/featured/${file.filename}`,
+    path: variants.md, // Stocker la variante md comme path (l'original est supprimé après traitement)
     variants,
     user_id: userId,
     is_in_gallery: false,

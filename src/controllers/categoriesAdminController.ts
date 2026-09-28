@@ -19,6 +19,7 @@ import { NotFoundResource } from "../config/errorCodes";
 import { NotFoundError } from "../errors/AppError";
 import categoriesAdminModel from "../models/categoriesAdminModel";
 import imagesAdminModel from "../models/imagesAdminModel";
+import { withTransaction } from "../models/db";
 import { asyncHandler } from "../utils/asyncHandler";
 import { getValidatedBody, getValidatedId } from "../utils/http/requestHelpers";
 import type {
@@ -112,4 +113,23 @@ const setCover = asyncHandler(async (req: Request, res: Response) => {
   res.status(200).json(category);
 });
 
-export { add, browse, browseImages, destroy, edit, read, reorderImages, setCover };
+/**
+ * DELETE /api/admin/categories/:id/images
+ * Supprime toutes les images d'une galerie.
+ * Utilise une transaction pour garantir l'atomicité.
+ */
+const destroyAllImages = asyncHandler(async (req: Request, res: Response) => {
+  const categoryId = getValidatedId(req);
+  const images = await imagesAdminModel.findByCategory(categoryId);
+
+  // Suppression de toutes les images dans une transaction
+  await withTransaction(async () => {
+    for (const image of images) {
+      await imagesAdminModel.deleteById(image.id);
+    }
+  });
+
+  res.sendStatus(204);
+});
+
+export { add, browse, browseImages, destroy, destroyAllImages, edit, read, reorderImages, setCover };

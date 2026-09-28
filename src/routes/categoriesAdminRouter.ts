@@ -17,6 +17,7 @@ import {
   browse,
   browseImages,
   destroy,
+  destroyAllImages,
   edit,
   read,
   reorderImages,
@@ -39,6 +40,7 @@ router.put("/:id", requireValidId(), validateBody(categoryUpdateSchema), edit);
 router.delete("/:id", requireValidId(), destroy);
 
 router.get("/:id/images", requireValidId(), browseImages);
+router.delete("/:id/images", requireValidId(), destroyAllImages);
 router.patch(
   "/:id/images/reorder",
   requireValidId(),
