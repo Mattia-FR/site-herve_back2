@@ -33,7 +33,12 @@ export async function processUploadedImage(
   const basename = path.basename(filePath, path.extname(filePath));
 
   try {
-    return await processImage(filePath, variantsDir);
+    const variants = await processImage(filePath, variantsDir);
+
+    // Supprimer l'original après création réussie des variantes pour économiser l'espace disque
+    await cleanupUploadedFile(filePath);
+
+    return variants;
   } catch (err) {
     // Rollback : nettoyer les fichiers créés avant de propager l'erreur
     await cleanupUploadedFile(filePath);

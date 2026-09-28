@@ -61,7 +61,7 @@ const add = asyncHandler(async (req: Request, res: Response) => {
     display_order: meta.display_order ?? 0,
     article_id: meta.article_id ?? null,
     category_id: meta.category_id ?? null,
-    path: `/uploads/gallery/${file.filename}`,
+    path: variants.md, // Stocker la variante md comme path (l'original est supprimé après traitement)
     variants,
     user_id: userId,
   });
@@ -124,7 +124,7 @@ const replaceFile = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const updated = await imagesAdminModel.update(id, {
-    path: `/uploads/gallery/${file.filename}`,
+    path: variants.md, // Stocker la variante md comme path (l'original est supprimé après traitement)
     variants,
   });
   if (!updated) throw new NotFoundError(NotFoundResource.IMAGE);

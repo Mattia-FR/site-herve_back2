@@ -49,6 +49,6 @@ export function createUpload(destDir: string) {
         cb(new multer.MulterError("LIMIT_UNEXPECTED_FILE", file.fieldname));
       }
     },
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10 Mo max
+    limits: { fileSize: 100 * 1024 * 1024 }, // 100 Mo max
   });
 }
