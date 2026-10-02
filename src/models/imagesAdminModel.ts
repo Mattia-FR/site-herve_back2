@@ -96,12 +96,22 @@ const create = async (data: ImageCreateData): Promise<ImageWithUrl> => {
   return created;
 };
 
-/** Met à jour les métadonnées d'une image (sans toucher au fichier physique). */
+/**
+ * Met à jour les métadonnées et/ou le fichier d'une image.
+ * Sérialise `variants` en JSON (colonne MySQL JSON) — mysql2.query()
+ * n'accepte pas un objet JS brut pour ce type de colonne.
+ */
 const update = async (id: number, data: ImageUpdateData): Promise<ImageWithUrl | null> => {
   const img = await findById(id);
   if (!img) return null;
 
-  const q = buildUpdateQuery("images", data);
+  const { variants, ...rest } = data;
+  const payload: Record<string, unknown> = { ...rest };
+  if (variants !== undefined) {
+    payload.variants = variants ? JSON.stringify(variants) : null;
+  }
+
+  const q = buildUpdateQuery("images", payload);
   if (!q) return img; // Aucun champ à mettre à jour
 
   await pool.query<ResultSetHeader>(q.sql, [...q.values, id]);

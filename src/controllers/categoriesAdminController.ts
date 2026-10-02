@@ -18,8 +18,8 @@ import type { z } from "zod";
 import { NotFoundResource } from "../config/errorCodes";
 import { NotFoundError } from "../errors/AppError";
 import categoriesAdminModel from "../models/categoriesAdminModel";
-import imagesAdminModel from "../models/imagesAdminModel";
 import { withTransaction } from "../models/db";
+import imagesAdminModel from "../models/imagesAdminModel";
 import { asyncHandler } from "../utils/asyncHandler";
 import { getValidatedBody, getValidatedId } from "../utils/http/requestHelpers";
 import type {
@@ -132,4 +132,14 @@ const destroyAllImages = asyncHandler(async (req: Request, res: Response) => {
   res.sendStatus(204);
 });
 
-export { add, browse, browseImages, destroy, destroyAllImages, edit, read, reorderImages, setCover };
+export {
+  add,
+  browse,
+  browseImages,
+  destroy,
+  destroyAllImages,
+  edit,
+  read,
+  reorderImages,
+  setCover,
+};
