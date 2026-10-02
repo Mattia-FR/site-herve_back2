@@ -11,7 +11,14 @@
  */
 
 /** Liste des types MIME image acceptés. */
-export const ALLOWED_IMAGE_MIMES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/tiff", "image/x-tiff"] as const;
+export const ALLOWED_IMAGE_MIMES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/tiff",
+  "image/x-tiff",
+] as const;
 
 /** Set pour vérification rapide O(1) dans les middlewares. */
 export const ALLOWED_IMAGE_MIME_SET = new Set<string>(ALLOWED_IMAGE_MIMES);
